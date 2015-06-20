@@ -1,11 +1,5 @@
 namespace RouteProvider
 
-
-// --------------------------------------------------------------------------------------
-// The World Bank type provider 
-// --------------------------------------------------------------------------------------
-namespace ProviderImplementation
-
 open System
 open System.Reflection
 open System.Net
@@ -17,8 +11,6 @@ open FParsec
 open TpUtils
 open Route
 
-// Make some Ghetto types that ProviderImplementation.ProvidedTypes.fs's quotation evaluator supports.
-// ProviderImplementation.ProvidedTypes.fs does not support records or discriminated unions
 type PathSegment (name:string) = 
   member x.name = name
 type ConstantSeg (name:string) =
@@ -41,18 +33,35 @@ type public RouteProvider(cfg : TypeProviderConfig) as this =
   
   let buildTypes (typeName : string) (args : obj []) = 
     match args with 
-    | [| :? string as routesStr; _; _; |] ->
+    | [| :? string as routesStr|] ->
       let newType = ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>)
       match runParserOnString RouteParsing.pRoutes () "Routes" routesStr with
       | Success(res,_, _) ->
         res |> Seq.iter (fun (route:Route) ->
-                          let routeTp = ProvidedTypeDefinition((routeTypeName route), Some typeof<obj>, HideObjectMethods = true)
-                          let ctorParams = route.routeSegments 
-                                           |> List.choose (function
-                                                          | NumericID(s) -> Some(ProvidedParameter(s, typeof<int64>))
-                                                          | _ -> None)
+                          let routeTp = ProvidedTypeDefinition((routeTypeName route), Some typeof<obj[]>, HideObjectMethods = true (*, IsErased = false *))
+                          
+                          let dynRouteParams = route.routeSegments 
+                                               |> List.choose (function | NumericID(name) -> Some (name, typeof<int64>) 
+                                                                        | _ -> None)
 
-                          routeTp.AddMember <| ProvidedConstructor(ctorParams,InvokeCode = fun args -> <@@ obj() @@>)
+                          let ctorParams = dynRouteParams |> List.map (fun (paramName, paramType) -> ProvidedParameter(paramName, paramType))
+                          routeTp.AddMember 
+                          <| ProvidedConstructor(ctorParams,
+                                                 InvokeCode = fun args -> 
+                                                                let argsAsObjs = List.map2 (fun e (_, argType) ->
+                                                                                             if argType = typeof<int64> then
+                                                                                              <@@ (%%(e):int64) :> obj @@>
+                                                                                             else
+                                                                                              failwith (sprintf "Unsupported type: %A" argType)
+                                                                                           ) args dynRouteParams
+                                                                Expr.NewArray(typeof<obj>, argsAsObjs)
+                                                                )
+                          let routeProps =
+                            dynRouteParams |> List.mapi (fun i (paramName, paramType) -> 
+                                                        ProvidedProperty(paramName, paramType, 
+                                                                         GetterCode = fun args -> 
+                                                                                        <@@ (%%(args.[0]) :> obj[]).[i] :?> int64 @@>))
+                          routeTp.AddMembers routeProps
 
                           // Pull things out of the route record to help out the Quotation evaluater in ProvidedTypes.fs
                           let verb = route.verb
@@ -73,7 +82,7 @@ type public RouteProvider(cfg : TypeProviderConfig) as this =
       | Failure (msg,_,_) ->
         failwith (sprintf "Failed to parse routes. Error: %s" msg)
       newType
-    | args -> failwith (sprintf "Bad params. Expected 1 string, but got an array of length %d: %A" args.Length args)
+    | args -> failwith (sprintf "Bad params. Expected 1 string, but got %d params: %A" args.Length args)
 
   let parameters = [ProvidedStaticParameter("routesStr", typeof<string>)
                     //ProvidedStaticParameter("ResolutionFolder", typeof<string>, parameterDefaultValue = "")
