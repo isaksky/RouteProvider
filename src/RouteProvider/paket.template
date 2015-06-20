@@ -1,0 +1,23 @@
+type project
+owners
+    Isak Sky
+authors 
+    Isak Sky
+projectUrl
+    http://github.com/isaksky/RouteProvider
+iconUrl
+    https://raw.githubusercontent.com/isaksky/RouteProvider/master/docs/files/img/logo.png
+licenseUrl
+    http://github.com/isaksky/RouteProvider/blob/master/LICENSE.txt
+requireLicenseAcceptance
+    false
+copyright
+    Copyright 2015
+tags
+    routes REST
+summary
+    A type provider for normal RESTy routes
+description
+    A type provider for normal RESTy routes. Reads a routes file and provides types for them.
+
+
