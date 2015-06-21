@@ -41,4 +41,7 @@ getProject123.projectId // val it : int64 = 123L
 - Support other types of path segments than just ```int64```
 - Add a top level property with a list of route descriptions, for use in matching
 - Provide a sample matching function (e.g., ```fun (path:string) (verb:string) -> Route option```)
-- Maybe switch to multiple verbs per route, like "GET PUT DELETE project/{projectId}"
+- Add a concise way to do define verbs per route"
+
+ 
+
