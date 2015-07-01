@@ -34,51 +34,62 @@ type public RouteProvider(cfg : TypeProviderConfig) as this =
   let buildTypes (typeName : string) (args : obj []) = 
     match args with 
     | [| :? string as routesStr|] ->
-      let newType = ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>)
+      let newType = ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj[]>)
       match runParserOnString RouteParsing.pRoutes () "Routes" routesStr with
-      | Success(res,_, _) ->
-        res |> Seq.iter (fun (route:Route) ->
-                          let routeTp = ProvidedTypeDefinition((routeTypeName route), Some typeof<obj[]>, HideObjectMethods = true (*, IsErased = false *))
+      | Success(routes,_, _) ->
+        let typeParamPairs = 
+          routes 
+          |> List.map (fun (route:Route) ->
+            let routesTp = ProvidedTypeDefinition((routeTypeName route), Some typeof<obj[]>, HideObjectMethods = true (*, IsErased = false *))
                           
-                          let dynRouteParams = route.routeSegments 
-                                               |> List.choose (function | NumericID(name) -> Some (name, typeof<int64>) 
-                                                                        | _ -> None)
+            let dynRouteParams = route.routeSegments 
+                                  |> List.choose (function | NumericID(name) -> Some (name, typeof<int64>) 
+                                                           | _ -> None)
 
-                          let ctorParams = dynRouteParams |> List.map (fun (paramName, paramType) -> ProvidedParameter(paramName, paramType))
-                          routeTp.AddMember 
-                          <| ProvidedConstructor(ctorParams,
-                                                 InvokeCode = fun args -> 
-                                                                let argsAsObjs = List.map2 (fun e (_, argType) ->
-                                                                                             if argType = typeof<int64> then
-                                                                                              <@@ (%%(e):int64) :> obj @@>
-                                                                                             else
-                                                                                              failwith (sprintf "Unsupported type: %A" argType)
-                                                                                           ) args dynRouteParams
-                                                                Expr.NewArray(typeof<obj>, argsAsObjs)
-                                                                )
-                          let routeProps =
-                            dynRouteParams |> List.mapi (fun i (paramName, paramType) -> 
-                                                        ProvidedProperty(paramName, paramType, 
-                                                                         GetterCode = fun args -> 
-                                                                                        <@@ (%%(args.[0]) :> obj[]).[i] :?> int64 @@>))
-                          routeTp.AddMembers routeProps
+            let ctorParams = dynRouteParams |> List.map (fun (paramName, paramType) -> ProvidedParameter(paramName, paramType))
+            routesTp.AddMember 
+            <| ProvidedConstructor(ctorParams,
+                                    InvokeCode = fun args -> 
+                                                  let argsAsObjs = List.map (fun e -> Expr.Coerce(e, typeof<obj>)) args
+                                                  Expr.NewArray(typeof<obj>, argsAsObjs)
+                                                  )
+            let routeProps =
+                dynRouteParams |> List.mapi (fun i (paramName, paramType) -> 
+                                          ProvidedProperty(paramName, paramType, 
+                                                            GetterCode = fun args -> 
+                                                                          <@@ (%%(args.[0]) :> obj[]).[i] :?> int64 @@>))
+            routesTp.AddMembers routeProps
 
-                          // Pull things out of the route record to help out the Quotation evaluater in ProvidedTypes.fs
-                          let verb = route.verb
-                          let segs = route.routeSegments
-                                     |> Seq.map (function | NamedRouteSegment.Constant(s) -> <@@ ConstantSeg(s) :> PathSegment @@>
-                                                          | NamedRouteSegment.NumericID(s) -> <@@ Int64Seg(s) :> PathSegment @@>)
-                                     |> List.ofSeq
+            // Pull things out of the route record to help out the Quotation evaluater in ProvidedTypes.fs
+            let verb = route.verb
+            let segs = route.routeSegments
+                        |> Seq.map (function | NamedRouteSegment.Constant(s) -> <@@ ConstantSeg(s) :> PathSegment @@>
+                                             | NamedRouteSegment.NumericID(s) -> <@@ Int64Seg(s) :> PathSegment @@>)
+                        |> List.ofSeq
                                         
-                          routeTp.AddMember <| ProvidedProperty("verb", typeof<string>, IsStatic = true,
-                                                                GetterCode = (fun _ -> <@@ verb @@>))
+            routesTp.AddMember <| ProvidedProperty("verb", typeof<string>, IsStatic = true,
+                                                  GetterCode = (fun _ -> <@@ verb @@>))
                           
-                          routeTp.AddMember <| ProvidedProperty("routeSegments", 
-                                                                typeof<PathSegment[]>, IsStatic = true,
-                                                                GetterCode = (fun _ -> Expr.NewArray(typeof<PathSegment>, segs)))
-                          
-                          newType.AddMember(routeTp)
-                        )
+            routesTp.AddMember <| ProvidedProperty("routeSegments", 
+                                                  typeof<PathSegment[]>, IsStatic = true,
+                                                  GetterCode = (fun _ -> Expr.NewArray(typeof<PathSegment>, segs)))
+            (routesTp, dynRouteParams))
+        Seq.iter (fst >> newType.AddMember) typeParamPairs
+        let newTypeCtorParams = 
+          typeParamPairs 
+          |> List.map (fun (subTp, subTypeParams) ->
+                          let subTypeParamTypes = subTypeParams 
+                                                  |> (List.map snd) 
+                                                  |> fun x -> typeof<obj> :: x 
+                                                  |> Array.ofList
+                          let handlerFuncTypeDef = handlerFuncTypeDef <| List.length subTypeParams
+                          let handlerFuncType = handlerFuncTypeDef.MakeGenericType(subTypeParamTypes)
+                          ProvidedParameter((subTp.Name), handlerFuncType))
+        let newTypeCtor = ProvidedConstructor(newTypeCtorParams, 
+                                              InvokeCode = fun args -> 
+                                                let argsAsObjs = List.map (fun e -> Expr.Coerce(e, typeof<obj>)) args
+                                                Expr.NewArray(typeof<obj>, argsAsObjs))
+        newType.AddMember newTypeCtor
       | Failure (msg,_,_) ->
         failwith (sprintf "Failed to parse routes. Error: %s" msg)
       newType

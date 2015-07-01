@@ -2,6 +2,23 @@
 
 open System
 
+ let handlerFuncTypeDef = 
+  function
+  | 0 -> typedefof<Func<_>>
+  | 1 -> typedefof<Func<_,_>>
+  | 2 -> typedefof<Func<_,_>>
+  | 3 -> typedefof<Func<_,_,_,_>>
+  | 4 -> typedefof<Func<_,_,_,_,_>>
+  | 5 -> typedefof<Func<_,_,_,_,_,_>>
+  | 6 -> typedefof<Func<_,_,_,_,_,_,_>>
+  | 7 -> typedefof<Func<_,_,_,_,_,_,_,_>>
+  | 8 -> typedefof<Func<_,_,_,_,_,_,_,_,_>>
+  | 9 -> typedefof<Func<_,_,_,_,_,_,_,_,_,_>>
+  | 10 -> typedefof<Func<_,_,_,_,_,_,_,_,_,_,_>>
+  | 11 -> typedefof<Func<_,_,_,_,_,_,_,_,_,_,_,_>>
+  | _ -> failwith "arity too high"
+
+
 type internal UriResolutionType = 
   | DesignTime
   | Runtime
