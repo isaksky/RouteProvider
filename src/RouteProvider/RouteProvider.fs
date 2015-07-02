@@ -56,8 +56,9 @@ type public RouteProvider(cfg : TypeProviderConfig) as this =
             let routeProps =
                 dynRouteParams |> List.mapi (fun i (paramName, paramType) -> 
                                           ProvidedProperty(paramName, paramType, 
-                                                            GetterCode = fun args -> 
-                                                                          <@@ (%%(args.[0]) :> obj[]).[i] :?> int64 @@>))
+                                                            GetterCode = fun args ->
+                                                                          let objExp = <@@ (%%(args.[0]) :> obj[]).[i] @@>
+                                                                          Expr.Coerce(objExp, paramType)))
             routesTp.AddMembers routeProps
 
             // Pull things out of the route record to help out the Quotation evaluater in ProvidedTypes.fs
