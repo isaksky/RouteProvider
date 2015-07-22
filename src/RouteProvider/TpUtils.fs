@@ -6,7 +6,7 @@ let handlerFuncTypeDef =
   function 
   | 0 -> typedefof<Func<_>>
   | 1 -> typedefof<Func<_, _>>
-  | 2 -> typedefof<Func<_, _>>
+  | 2 -> typedefof<Func<_, _, _>>
   | 3 -> typedefof<Func<_, _, _, _>>
   | 4 -> typedefof<Func<_, _, _, _, _>>
   | 5 -> typedefof<Func<_, _, _, _, _, _>>

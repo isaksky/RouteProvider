@@ -12,9 +12,10 @@ open TpUtils
 open Route
 
 type RouteNode = 
-  { routes : Route2 list; children: RouteNodeChild list} with
+  { routes : RouteWithIdx list; children: RouteNodeChild list} with
   static member empty = { routes = []; children = [] }
 and RouteNodeChild = { seg: NamedRouteSegment; node: RouteNode } // this would just be a Tuple, but QuotationHelper chokes on it
+and RouteWithIdx = { route: Route2; idx: int}                    // -=-
 
 type RouteMatchResult () =
   do ()
@@ -22,27 +23,29 @@ type RouteMatchResultBadVerb () =
   inherit RouteMatchResult ()
 type RouteMatchResultNotFound () =
   inherit RouteMatchResult ()
-type RouteMatchResultMatch (routeParams) =
+type RouteMatchResultMatch (routeIdx:int, routeParams:obj[]) =
   inherit RouteMatchResult ()
+  member x.routeIdx = routeIdx
   member x.routeParams = routeParams
 
 [<AutoOpen>]
 module Internal = 
-  let rec addRoute (routeNode:RouteNode) (segs:NamedRouteSegment list) route : RouteNode =
+  let rec addRoute (routeNode:RouteNode) (segs:NamedRouteSegment list) (idx:int, route:Route2) =
     match segs with
     | [] ->
-      { routeNode with routes = route :: routeNode.routes}
+      { routeNode with routes = {route = route; idx = idx} :: routeNode.routes}
     | seg::tl -> 
       let child = match Seq.tryFind (fun (child) -> child.seg = seg) routeNode.children with
                   | Some (child) -> child.node
                   | None -> RouteNode.empty
-      let child = addRoute child tl route
+      let child = addRoute child tl (idx, route)
       { routeNode with children = {seg = seg; node = child } :: routeNode.children}
 
   let buildRouteTree (routes: Route2 list) =
-      List.foldBack (fun (route:Route2) tree -> 
-                      addRoute tree route.routeSegments route
-                     ) routes RouteNode.empty 
+      let routesWithIdx = [0..routes.Length - 1] |> List.zip <| routes
+      List.foldBack (fun (idx, route) tree -> 
+                      addRoute tree route.routeSegments (idx, route)
+                     ) routesWithIdx RouteNode.empty 
 
   let routeTypeName2 (route:Route2) = 
     let segsDesc = route.routeSegments |> Seq.map (function | Constant(s) -> s
@@ -79,15 +82,33 @@ module Internal =
         else
           RouteMatchResultNotFound() :> RouteMatchResult
     | [] ->
-      match routeTree.routes |> Seq.tryFind (fun r -> r.verb = verb) with
-      | Some(_) ->
-        RouteMatchResultMatch((routeParams.ToArray())) :> RouteMatchResult
+      match routeTree.routes |> Seq.tryFind (fun r -> r.route.verb = verb) with
+      | Some(route) ->
+        RouteMatchResultMatch(route.idx, (routeParams.ToArray())) :> RouteMatchResult
       | _ ->
         RouteMatchResultNotFound() :> RouteMatchResult
       
   let matchRoute(verb:string, pathStr:string, routeTree:RouteNode) =
-    let parts = pathStr.Split('/') |> List.ofArray
+    let partsAry = pathStr.Split('/')
+
+    let parts = if partsAry.Length > 1 && partsAry.[partsAry.Length - 1] = System.String.Empty then 
+                  partsAry.[0..partsAry.Length - 2] 
+                else partsAry
+                |> List.ofArray
     matchRoute' verb parts (ResizeArray<obj>()) routeTree
+
+  let dispatchRoute(verb:string, pathStr:string, routeTree:RouteNode, handlers:obj[]) : obj =
+    match matchRoute(verb, pathStr, routeTree) with
+    | :? RouteMatchResultMatch as m ->
+      //let handlerFuncTypeDef = handlerFuncTypeDef <| Seq.length m.routeParams
+      let handler = handlers.[m.routeIdx] :?> System.Delegate
+      handler.DynamicInvoke(m.routeParams)
+    | :? RouteMatchResultNotFound ->
+      null
+    | :? RouteMatchResultBadVerb ->
+      null
+    | _ as x ->
+      failwithf "Match result %A not implemented" x
 
 [<TypeProvider>]
 type public RouteProvider(cfg : TypeProviderConfig) as this = 
@@ -164,18 +185,30 @@ type public RouteProvider(cfg : TypeProviderConfig) as this =
                                                 Expr.NewArray(typeof<obj>, selfObjAry))
         routerType.AddMember newTypeCtor
 
+        routerType.AddMember <| ProvidedMethod("matchRoute", 
+                               [ProvidedParameter("verb", typeof<string>); ProvidedParameter("path", typeof<string>)], 
+                               typeof<RouteMatchResult>, 
+                               InvokeCode = fun args -> 
+                                                let selfExp = <@@ (%%(args.[0]) :> obj[]) @@>
+                                                let routeTreeExp = <@@ (%%selfExp :> obj[]).[0] :?> RouteNode @@>
+                                                let verbExp = <@@ (%%(args.[1]) :> string) @@>
+                                                let pathExp = <@@ (%%(args.[2]) :> string) @@>
+                                                <@@ Internal.matchRoute(%%verbExp, %%pathExp, %%routeTreeExp) :> RouteMatchResult @@>)
+
         routerType.AddMember <| ProvidedMethod("dispatchRoute", 
                                [ProvidedParameter("verb", typeof<string>); ProvidedParameter("path", typeof<string>)], 
                                typeof<obj>, (* todo, make this return type configurable *)
-                               InvokeCode = QuotationHelpers.quoteRecord 
-                                              routeTree
-                                              (fun args var ->
-                                                let thisExp = <@@ (%%(args.[0]) :> obj[]) @@>
+                               InvokeCode = fun args -> 
+                                                let selfExp = <@@ (%%(args.[0]) :> obj[]) @@>
+                                                let routeTreeExp = <@@ (%%selfExp :> obj[]).[0] :?> RouteNode @@>
+                                                let handlersExp = <@@ (%%selfExp :> obj[]).[1..] :> obj[] @@>
+
                                                 let verbExp = <@@ (%%(args.[1]) :> string) @@>
                                                 let pathExp = <@@ (%%(args.[2]) :> string) @@>
-                                                let matchExp = <@@ Internal.matchRoute(%%verbExp, %%pathExp, %%var) @@>
-                                                <@@ sprintf "Route: %A" ((%%matchExp :> RouteMatchResult )) @@>
-                                                ))
+
+                                                <@@ Internal.dispatchRoute(%%verbExp, %%pathExp, %%routeTreeExp, %%handlersExp) @@>
+
+                                                )
       | Failure (msg,_,_) ->
         failwith (sprintf "Failed to parse routes. Error: %s" msg)
       routerType
