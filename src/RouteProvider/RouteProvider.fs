@@ -11,15 +11,10 @@ open FParsec
 open TpUtils
 open Route
 
-type RouteNode(routes: ResizeArray<Route>, children: ResizeArray<PathSegment * RouteNode>) =
-  member x.routes = routes
-  member x.children = children
-  static member empty = RouteNode(ResizeArray<_>(), ResizeArray<_>())
-
-type RouteNode2 = 
+type RouteNode = 
   { routes : Route2 list; children: RouteNodeChild list} with
   static member empty = { routes = []; children = [] }
-and RouteNodeChild = { seg: NamedRouteSegment; node: RouteNode2 }
+and RouteNodeChild = { seg: NamedRouteSegment; node: RouteNode } // this would just be a Tuple, but QuotationHelper chokes on it
 
 type RouteMatchResult () =
   do ()
@@ -33,47 +28,21 @@ type RouteMatchResultMatch (routeParams) =
 
 [<AutoOpen>]
 module Internal = 
-  let rec addRoute (routeNode:RouteNode) (segs:ResizeArray<PathSegment>) segsIdx route : RouteNode =
-    if segsIdx = segs.Count - 1 then
-      routeNode.routes.Add(route)
-      routeNode
-    else
-      let seg = segs.[segsIdx]
-      let child = match Seq.tryFind (fun (childSeg, _) -> childSeg = seg) routeNode.children with
-                  | Some (_, child) -> child
-                  | None -> RouteNode.empty
-      let child = addRoute child segs (segsIdx + 1) route
-      routeNode.children.Add((seg, child))
-      routeNode
-
-  let buildRouteTree (routes: Route list) =
-      let routeTree = RouteNode.empty
-      for route in routes do 
-        addRoute routeTree (route.routeSegments) 0 route |> ignore
-      routeTree
-
-  let rec addRoute2 (routeNode:RouteNode2) (segs:NamedRouteSegment list) route : RouteNode2 =
+  let rec addRoute (routeNode:RouteNode) (segs:NamedRouteSegment list) route : RouteNode =
     match segs with
     | [] ->
       { routeNode with routes = route :: routeNode.routes}
     | seg::tl -> 
       let child = match Seq.tryFind (fun (child) -> child.seg = seg) routeNode.children with
                   | Some (child) -> child.node
-                  | None -> RouteNode2.empty
-      let child = addRoute2 child tl route
+                  | None -> RouteNode.empty
+      let child = addRoute child tl route
       { routeNode with children = {seg = seg; node = child } :: routeNode.children}
 
-  let buildRouteTree2 (routes: Route2 list) =
+  let buildRouteTree (routes: Route2 list) =
       List.foldBack (fun (route:Route2) tree -> 
-                      addRoute2 tree route.routeSegments route
-                     ) routes RouteNode2.empty 
-
-  let routeTypeName (route:Route) = 
-    let segsDesc = route.routeSegments |> Seq.map (function | :? ConstantSeg as seg -> seg.name
-                                                            | :? Int64Seg as seg -> sprintf "{%s}" seg.name
-                                                            | x -> failwithf "Route segment %A not implemented" x)
-                                       |> String.concat "/"
-    sprintf "%s %s" route.verb segsDesc
+                      addRoute tree route.routeSegments route
+                     ) routes RouteNode.empty 
 
   let routeTypeName2 (route:Route2) = 
     let segsDesc = route.routeSegments |> Seq.map (function | Constant(s) -> s
@@ -85,9 +54,9 @@ module Internal =
     match parts with
     | part::tl ->
       let constMatch = 
-        Seq.tryPick (fun ((seg:PathSegment), c) ->
-                       match seg with | :? ConstantSeg as seg when seg.name = part -> Some(c)
-                                      | _ -> None) 
+        Seq.tryPick (fun (child) ->
+                       match child.seg with | Constant(s) when s = part  -> Some(child.node)
+                                            | _ -> None) 
                     routeTree.children
 
       match constMatch with
@@ -96,9 +65,9 @@ module Internal =
       | _ ->
         let ok, num =  Int64.TryParse part
         if ok then
-          let numericMatch = Seq.tryPick (fun ((seg:PathSegment), c) -> 
-                                            match seg with | :? Int64Seg -> Some(c)
-                                                           | _ -> None) 
+          let numericMatch = Seq.tryPick (fun (child) -> 
+                                            match child.seg with | NumericID(_) -> Some(child.node)
+                                                                 | _ -> None) 
                                           routeTree.children
 
           match numericMatch with
@@ -120,45 +89,6 @@ module Internal =
     let parts = pathStr.Split('/') |> List.ofArray
     matchRoute' verb parts (ResizeArray<obj>()) routeTree
 
-  let rec matchRoute2' (verb:string) (parts: string list) (routeParams:ResizeArray<obj>) (routeTree:RouteNode2) : RouteMatchResult =
-    match parts with
-    | part::tl ->
-      let constMatch = 
-        Seq.tryPick (fun (child) ->
-                       match child.seg with | Constant(s) when s = part  -> Some(child.node)
-                                            | _ -> None) 
-                    routeTree.children
-
-      match constMatch with
-      | Some(routeNode) ->
-        matchRoute2' verb tl routeParams routeNode
-      | _ ->
-        let ok, num =  Int64.TryParse part
-        if ok then
-          let numericMatch = Seq.tryPick (fun (child) -> 
-                                            match child.seg with | NumericID(_) -> Some(child.node)
-                                                                 | _ -> None) 
-                                          routeTree.children
-
-          match numericMatch with
-          | Some(routeNode) ->
-            routeParams.Add(num :> obj)
-            matchRoute2' verb tl routeParams routeNode
-          | None ->
-            RouteMatchResultNotFound() :> RouteMatchResult
-        else
-          RouteMatchResultNotFound() :> RouteMatchResult
-    | [] ->
-      match routeTree.routes |> Seq.tryFind (fun r -> r.verb = verb) with
-      | Some(_) ->
-        RouteMatchResultMatch((routeParams.ToArray())) :> RouteMatchResult
-      | _ ->
-        RouteMatchResultNotFound() :> RouteMatchResult
-      
-  let matchRoute2(verb:string, pathStr:string, routeTree:RouteNode2) =
-    let parts = pathStr.Split('/') |> List.ofArray
-    matchRoute2' verb parts (ResizeArray<obj>()) routeTree
-
 [<TypeProvider>]
 type public RouteProvider(cfg : TypeProviderConfig) as this = 
   inherit TypeProviderForNamespaces()
@@ -176,12 +106,6 @@ type public RouteProvider(cfg : TypeProviderConfig) as this =
           routes 
           |> List.map (fun (route:Route2) ->
             let routesTp = ProvidedTypeDefinition((routeTypeName2 route), Some typeof<obj[]>, HideObjectMethods = true (*, IsErased = false *))
-                          
-//            let dynRouteParams = route.routeSegments 
-//                                 |> Seq.choose (function | :? Int64Seg as seg -> Some (seg.name, typeof<int64>) 
-//                                                         | _ -> None)
-//                                 |> List.ofSeq
-
             let dynRouteParams = route.routeSegments 
                                  |> Seq.choose (function | NumericID(s) -> Some (s, typeof<int64>) 
                                                          | _ -> None)
@@ -201,25 +125,15 @@ type public RouteProvider(cfg : TypeProviderConfig) as this =
                                                                           let objExp = <@@ (%%(args.[0]) :> obj[]).[i] @@>
                                                                           Expr.Coerce(objExp, paramType)))
             routesTp.AddMembers routeProps
-            // Pull things out of the route record to help out the Quotation evaluater in ProvidedTypes.fs
+            // Pull things out of the route record to help out the Quotation evaluater
             let verb = route.verb
-//            let segs = route.routeSegments
-//                        |> Seq.map (function | :? ConstantSeg as seg -> 
-//                                               let name = seg.name
-//                                               <@@ ConstantSeg name :> PathSegment @@>
-//                                             | :? Int64Seg as seg -> 
-//                                               let name = seg.name
-//                                               <@@ Int64Seg name :> PathSegment @@>
-//                                             | _ -> failwith "PathSegment type not implemented")
-//                        |> List.ofSeq
-
+            // Make ghetto version of NamedRouteSegment list that is supported with type providers
             let segs = route.routeSegments
-                        |> Seq.map (function | Constant(s) -> 
+                        |> List.map (function | Constant(s) -> 
                                                <@@ ConstantSeg s :> PathSegment @@>
-                                             | NumericID(s) -> 
+                                              | NumericID(s) -> 
                                                <@@ Int64Seg s :> PathSegment @@>
-                                             | _ -> failwith "PathSegment type not implemented")
-                        |> List.ofSeq
+                                              | _ -> failwith "PathSegment type not implemented")
                                         
             routesTp.AddMember <| ProvidedProperty("verb", typeof<string>, IsStatic = true,
                                                   GetterCode = (fun _ -> <@@ verb @@>))
@@ -228,8 +142,7 @@ type public RouteProvider(cfg : TypeProviderConfig) as this =
                                                   typeof<PathSegment[]>, IsStatic = true,
                                                   GetterCode = (fun _ -> Expr.NewArray(typeof<PathSegment>, segs)))
             (routesTp, dynRouteParams))
-        let routeTree = buildRouteTree2 routes
-        printfn "Route tree:\n%A" routeTree 
+        let routeTree = buildRouteTree routes
         Seq.iter (fst >> routerType.AddMember) typeParamPairs
         let newTypeCtorParams = 
           typeParamPairs 
@@ -260,7 +173,7 @@ type public RouteProvider(cfg : TypeProviderConfig) as this =
                                                 let thisExp = <@@ (%%(args.[0]) :> obj[]) @@>
                                                 let verbExp = <@@ (%%(args.[1]) :> string) @@>
                                                 let pathExp = <@@ (%%(args.[2]) :> string) @@>
-                                                let matchExp = <@@ Internal.matchRoute2(%%verbExp, %%pathExp, %%var) @@>
+                                                let matchExp = <@@ Internal.matchRoute(%%verbExp, %%pathExp, %%var) @@>
                                                 <@@ sprintf "Route: %A" ((%%matchExp :> RouteMatchResult )) @@>
                                                 ))
       | Failure (msg,_,_) ->
