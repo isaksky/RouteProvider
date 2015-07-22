@@ -11,12 +11,153 @@ open FParsec
 open TpUtils
 open Route
 
-type PathSegment (name:string) = 
-  member x.name = name
-type ConstantSeg (name:string) =
-  inherit PathSegment(name)
-type Int64Seg (name:string) =
-  inherit PathSegment(name)
+type RouteNode(routes: ResizeArray<Route>, children: ResizeArray<PathSegment * RouteNode>) =
+  member x.routes = routes
+  member x.children = children
+  static member empty = RouteNode(ResizeArray<_>(), ResizeArray<_>())
+
+type RouteNode2 = 
+  { routes : Route2 list; children: RouteNodeChild list} with
+  static member empty = { routes = []; children = [] }
+and RouteNodeChild = { seg: NamedRouteSegment; node: RouteNode2 }
+
+type RouteMatchResult () =
+  do ()
+type RouteMatchResultBadVerb () =
+  inherit RouteMatchResult ()
+type RouteMatchResultNotFound () =
+  inherit RouteMatchResult ()
+type RouteMatchResultMatch (routeParams) =
+  inherit RouteMatchResult ()
+  member x.routeParams = routeParams
+
+[<AutoOpen>]
+module Internal = 
+  let rec addRoute (routeNode:RouteNode) (segs:ResizeArray<PathSegment>) segsIdx route : RouteNode =
+    if segsIdx = segs.Count - 1 then
+      routeNode.routes.Add(route)
+      routeNode
+    else
+      let seg = segs.[segsIdx]
+      let child = match Seq.tryFind (fun (childSeg, _) -> childSeg = seg) routeNode.children with
+                  | Some (_, child) -> child
+                  | None -> RouteNode.empty
+      let child = addRoute child segs (segsIdx + 1) route
+      routeNode.children.Add((seg, child))
+      routeNode
+
+  let buildRouteTree (routes: Route list) =
+      let routeTree = RouteNode.empty
+      for route in routes do 
+        addRoute routeTree (route.routeSegments) 0 route |> ignore
+      routeTree
+
+  let rec addRoute2 (routeNode:RouteNode2) (segs:NamedRouteSegment list) route : RouteNode2 =
+    match segs with
+    | [] ->
+      { routeNode with routes = route :: routeNode.routes}
+    | seg::tl -> 
+      let child = match Seq.tryFind (fun (child) -> child.seg = seg) routeNode.children with
+                  | Some (child) -> child.node
+                  | None -> RouteNode2.empty
+      let child = addRoute2 child tl route
+      { routeNode with children = {seg = seg; node = child } :: routeNode.children}
+
+  let buildRouteTree2 (routes: Route2 list) =
+      List.foldBack (fun (route:Route2) tree -> 
+                      addRoute2 tree route.routeSegments route
+                     ) routes RouteNode2.empty 
+
+  let routeTypeName (route:Route) = 
+    let segsDesc = route.routeSegments |> Seq.map (function | :? ConstantSeg as seg -> seg.name
+                                                            | :? Int64Seg as seg -> sprintf "{%s}" seg.name
+                                                            | x -> failwithf "Route segment %A not implemented" x)
+                                       |> String.concat "/"
+    sprintf "%s %s" route.verb segsDesc
+
+  let routeTypeName2 (route:Route2) = 
+    let segsDesc = route.routeSegments |> Seq.map (function | Constant(s) -> s
+                                                            | NumericID(s) -> sprintf "{%s}" s)
+                                       |> String.concat "/"
+    sprintf "%s %s" route.verb segsDesc
+
+  let rec matchRoute' (verb:string) (parts: string list) (routeParams:ResizeArray<obj>) (routeTree:RouteNode) : RouteMatchResult =
+    match parts with
+    | part::tl ->
+      let constMatch = 
+        Seq.tryPick (fun ((seg:PathSegment), c) ->
+                       match seg with | :? ConstantSeg as seg when seg.name = part -> Some(c)
+                                      | _ -> None) 
+                    routeTree.children
+
+      match constMatch with
+      | Some(routeNode) ->
+        matchRoute' verb tl routeParams routeNode
+      | _ ->
+        let ok, num =  Int64.TryParse part
+        if ok then
+          let numericMatch = Seq.tryPick (fun ((seg:PathSegment), c) -> 
+                                            match seg with | :? Int64Seg -> Some(c)
+                                                           | _ -> None) 
+                                          routeTree.children
+
+          match numericMatch with
+          | Some(routeNode) ->
+            routeParams.Add(num :> obj)
+            matchRoute' verb tl routeParams routeNode
+          | None ->
+            RouteMatchResultNotFound() :> RouteMatchResult
+        else
+          RouteMatchResultNotFound() :> RouteMatchResult
+    | [] ->
+      match routeTree.routes |> Seq.tryFind (fun r -> r.verb = verb) with
+      | Some(_) ->
+        RouteMatchResultMatch((routeParams.ToArray())) :> RouteMatchResult
+      | _ ->
+        RouteMatchResultNotFound() :> RouteMatchResult
+      
+  let matchRoute(verb:string, pathStr:string, routeTree:RouteNode) =
+    let parts = pathStr.Split('/') |> List.ofArray
+    matchRoute' verb parts (ResizeArray<obj>()) routeTree
+
+  let rec matchRoute2' (verb:string) (parts: string list) (routeParams:ResizeArray<obj>) (routeTree:RouteNode2) : RouteMatchResult =
+    match parts with
+    | part::tl ->
+      let constMatch = 
+        Seq.tryPick (fun (child) ->
+                       match child.seg with | Constant(s) when s = part  -> Some(child.node)
+                                            | _ -> None) 
+                    routeTree.children
+
+      match constMatch with
+      | Some(routeNode) ->
+        matchRoute2' verb tl routeParams routeNode
+      | _ ->
+        let ok, num =  Int64.TryParse part
+        if ok then
+          let numericMatch = Seq.tryPick (fun (child) -> 
+                                            match child.seg with | NumericID(_) -> Some(child.node)
+                                                                 | _ -> None) 
+                                          routeTree.children
+
+          match numericMatch with
+          | Some(routeNode) ->
+            routeParams.Add(num :> obj)
+            matchRoute2' verb tl routeParams routeNode
+          | None ->
+            RouteMatchResultNotFound() :> RouteMatchResult
+        else
+          RouteMatchResultNotFound() :> RouteMatchResult
+    | [] ->
+      match routeTree.routes |> Seq.tryFind (fun r -> r.verb = verb) with
+      | Some(_) ->
+        RouteMatchResultMatch((routeParams.ToArray())) :> RouteMatchResult
+      | _ ->
+        RouteMatchResultNotFound() :> RouteMatchResult
+      
+  let matchRoute2(verb:string, pathStr:string, routeTree:RouteNode2) =
+    let parts = pathStr.Split('/') |> List.ofArray
+    matchRoute2' verb parts (ResizeArray<obj>()) routeTree
 
 [<TypeProvider>]
 type public RouteProvider(cfg : TypeProviderConfig) as this = 
@@ -25,26 +166,26 @@ type public RouteProvider(cfg : TypeProviderConfig) as this =
   let asm = System.Reflection.Assembly.GetExecutingAssembly()
   let root = ProvidedTypeDefinition(asm, ns, "RouteProvider", Some typeof<obj>)
 
-  let routeTypeName (route:Route.Route) = 
-    let segsDesc = route.routeSegments |> Seq.map (function | Constant(s) -> s
-                                                            | NumericID(s) -> sprintf "{%s}" s )
-                                       |> String.concat "/"
-    sprintf "%s %s" route.verb segsDesc
-  
   let buildTypes (typeName : string) (args : obj []) = 
     match args with 
     | [| :? string as routesStr|] ->
-      let newType = ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj[]>)
+      let routerType = ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj[]>)
       match runParserOnString RouteParsing.pRoutes () "Routes" routesStr with
       | Success(routes,_, _) ->
         let typeParamPairs = 
           routes 
-          |> List.map (fun (route:Route) ->
-            let routesTp = ProvidedTypeDefinition((routeTypeName route), Some typeof<obj[]>, HideObjectMethods = true (*, IsErased = false *))
+          |> List.map (fun (route:Route2) ->
+            let routesTp = ProvidedTypeDefinition((routeTypeName2 route), Some typeof<obj[]>, HideObjectMethods = true (*, IsErased = false *))
                           
+//            let dynRouteParams = route.routeSegments 
+//                                 |> Seq.choose (function | :? Int64Seg as seg -> Some (seg.name, typeof<int64>) 
+//                                                         | _ -> None)
+//                                 |> List.ofSeq
+
             let dynRouteParams = route.routeSegments 
-                                  |> List.choose (function | NumericID(name) -> Some (name, typeof<int64>) 
-                                                           | _ -> None)
+                                 |> Seq.choose (function | NumericID(s) -> Some (s, typeof<int64>) 
+                                                         | _ -> None)
+                                 |> List.ofSeq
 
             let ctorParams = dynRouteParams |> List.map (fun (paramName, paramType) -> ProvidedParameter(paramName, paramType))
             routesTp.AddMember 
@@ -60,12 +201,24 @@ type public RouteProvider(cfg : TypeProviderConfig) as this =
                                                                           let objExp = <@@ (%%(args.[0]) :> obj[]).[i] @@>
                                                                           Expr.Coerce(objExp, paramType)))
             routesTp.AddMembers routeProps
-
             // Pull things out of the route record to help out the Quotation evaluater in ProvidedTypes.fs
             let verb = route.verb
+//            let segs = route.routeSegments
+//                        |> Seq.map (function | :? ConstantSeg as seg -> 
+//                                               let name = seg.name
+//                                               <@@ ConstantSeg name :> PathSegment @@>
+//                                             | :? Int64Seg as seg -> 
+//                                               let name = seg.name
+//                                               <@@ Int64Seg name :> PathSegment @@>
+//                                             | _ -> failwith "PathSegment type not implemented")
+//                        |> List.ofSeq
+
             let segs = route.routeSegments
-                        |> Seq.map (function | NamedRouteSegment.Constant(s) -> <@@ ConstantSeg(s) :> PathSegment @@>
-                                             | NamedRouteSegment.NumericID(s) -> <@@ Int64Seg(s) :> PathSegment @@>)
+                        |> Seq.map (function | Constant(s) -> 
+                                               <@@ ConstantSeg s :> PathSegment @@>
+                                             | NumericID(s) -> 
+                                               <@@ Int64Seg s :> PathSegment @@>
+                                             | _ -> failwith "PathSegment type not implemented")
                         |> List.ofSeq
                                         
             routesTp.AddMember <| ProvidedProperty("verb", typeof<string>, IsStatic = true,
@@ -75,25 +228,44 @@ type public RouteProvider(cfg : TypeProviderConfig) as this =
                                                   typeof<PathSegment[]>, IsStatic = true,
                                                   GetterCode = (fun _ -> Expr.NewArray(typeof<PathSegment>, segs)))
             (routesTp, dynRouteParams))
-        Seq.iter (fst >> newType.AddMember) typeParamPairs
+        let routeTree = buildRouteTree2 routes
+        printfn "Route tree:\n%A" routeTree 
+        Seq.iter (fst >> routerType.AddMember) typeParamPairs
         let newTypeCtorParams = 
           typeParamPairs 
           |> List.map (fun (subTp, subTypeParams) ->
                           let subTypeParamTypes = subTypeParams 
                                                   |> (List.map snd) 
-                                                  |> fun x -> typeof<obj> :: x 
+                                                  |> fun xs -> xs @ [typeof<obj>] (* todo, make this return type configurable *) 
                                                   |> Array.ofList
                           let handlerFuncTypeDef = handlerFuncTypeDef <| List.length subTypeParams
                           let handlerFuncType = handlerFuncTypeDef.MakeGenericType(subTypeParamTypes)
                           ProvidedParameter((subTp.Name), handlerFuncType))
+
         let newTypeCtor = ProvidedConstructor(newTypeCtorParams, 
                                               InvokeCode = fun args -> 
                                                 let argsAsObjs = List.map (fun e -> Expr.Coerce(e, typeof<obj>)) args
-                                                Expr.NewArray(typeof<obj>, argsAsObjs))
-        newType.AddMember newTypeCtor
+                                                let _, routesExp = QuotationHelpers.recordExpr routeTree
+                                                let routesObjExp = Expr.Coerce(routesExp, typeof<obj>)
+                                                let selfObjAry = routesObjExp :: argsAsObjs
+                                                Expr.NewArray(typeof<obj>, selfObjAry))
+        routerType.AddMember newTypeCtor
+
+        routerType.AddMember <| ProvidedMethod("dispatchRoute", 
+                               [ProvidedParameter("verb", typeof<string>); ProvidedParameter("path", typeof<string>)], 
+                               typeof<obj>, (* todo, make this return type configurable *)
+                               InvokeCode = QuotationHelpers.quoteRecord 
+                                              routeTree
+                                              (fun args var ->
+                                                let thisExp = <@@ (%%(args.[0]) :> obj[]) @@>
+                                                let verbExp = <@@ (%%(args.[1]) :> string) @@>
+                                                let pathExp = <@@ (%%(args.[2]) :> string) @@>
+                                                let matchExp = <@@ Internal.matchRoute2(%%verbExp, %%pathExp, %%var) @@>
+                                                <@@ sprintf "Route: %A" ((%%matchExp :> RouteMatchResult )) @@>
+                                                ))
       | Failure (msg,_,_) ->
         failwith (sprintf "Failed to parse routes. Error: %s" msg)
-      newType
+      routerType
     | args -> failwith (sprintf "Bad params. Expected 1 string, but got %d params: %A" args.Length args)
 
   let parameters = [ProvidedStaticParameter("routesStr", typeof<string>)

@@ -1,0 +1,18 @@
+[<Literal>]
+let routesStr = """
+api/projects/{projectId}
+"""
+
+type Routes = RouteProvider<>
+
+let handleProjectById ctx projectId =
+   println "foo"
+
+let router = Routes(
+  ``api/projects/{projectId}``: handleProjectById
+)
+
+let routeDef = router.match("api/projects/12") 
+// val it: RouteDef = { template: "..."; pathSegments: [||]; handler= (fun...)}
+
+router.handle(ctx, "api/projects/12")
