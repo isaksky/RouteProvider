@@ -37,9 +37,31 @@ let getProject123 = Routes.``GET projects/{projectId}`` 123L
 getProject123.projectId // val it : int64 = 123L
 ```
 
+``` Fsharp
+[<Literal>]
+let routes = """
+  GET projects/{projectId} 
+  GET projects/{projectId}/comments/{commentId}
+  PUT projects/{projectId} 
+"""
+
+type Routes = IsakSky.RouteProvider<routes>
+
+let router = Routes(
+              ``GET projects/{projectId}`` = (fun projectId -> printfn "You asked for project %d" projectId),
+              ``GET projects/{projectId}/comments/{commentId}`` = (fun projectId commentId ->
+                                                                    printfn "You asked for project %d and comment %d" projectId commentId),
+              ``PUT projects/{projectId}`` = (fun p -> printfn "Update project %d" p)
+             )
+```
+
+Now we can use the router like this:
+
+    router.dispatchRoute("GET", "projects/4321/comments/1234")
+    -> "You asked for project 4321 and comment 1234"
+
 ## Todo
 - Support other types of path segments than just ```int64```
-- Add a top level property with a list of route descriptions, for use in matching
-- Provide a sample matching function (e.g., ```fun (path:string) (verb:string) -> Route option```)
-- Add a concise way to do define verbs per route
+- Not found handlers
+- Add a concise way to do define multiple verbs per route
 - Allow routes to be defined in a seperate file
