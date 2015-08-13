@@ -170,7 +170,6 @@ type public RouteProvider(cfg : TypeProviderConfig) as this =
           |> List.map (fun (subTp, subTypeParams) ->
                           let subTypeParamTypes = subTypeParams 
                                                   |> (List.map snd) 
-                                                  |> fun xs -> xs @ [typeof<obj>] (* todo, make this return type configurable *) 
                                                   |> Array.ofList
                           let handlerFuncTypeDef = handlerFuncTypeDef <| List.length subTypeParams
                           let handlerFuncType = handlerFuncTypeDef.MakeGenericType(subTypeParamTypes)
@@ -197,7 +196,7 @@ type public RouteProvider(cfg : TypeProviderConfig) as this =
 
         routerType.AddMember <| ProvidedMethod("dispatchRoute", 
                                [ProvidedParameter("verb", typeof<string>); ProvidedParameter("path", typeof<string>)], 
-                               typeof<obj>, (* todo, make this return type configurable *)
+                               typeof<unit>,
                                InvokeCode = fun args -> 
                                                 let selfExp = <@@ (%%(args.[0]) :> obj[]) @@>
                                                 let routeTreeExp = <@@ (%%selfExp :> obj[]).[0] :?> RouteNode @@>
@@ -214,9 +213,7 @@ type public RouteProvider(cfg : TypeProviderConfig) as this =
       routerType
     | args -> failwith (sprintf "Bad params. Expected 1 string, but got %d params: %A" args.Length args)
 
-  let parameters = [ProvidedStaticParameter("routesStr", typeof<string>)
-                    //ProvidedStaticParameter("ResolutionFolder", typeof<string>, parameterDefaultValue = "")
-                    ]
+  let parameters = [ProvidedStaticParameter("routesStr", typeof<string>)]
 
   let helpText = """<summary>Typed representation of a set of routes.</summary>
        <param name='RouteString'>The set of routes!</param>"""
