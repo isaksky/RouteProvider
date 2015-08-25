@@ -29,6 +29,9 @@ type RouteMatchResult_Match (routeIdx:int, routeParams:obj[]) =
   member x.routeIdx = routeIdx
   member x.routeParams = routeParams
 
+exception RouteNotFound
+exception BadVerb of string[]
+
 [<AutoOpen>]
 module Internal = 
   let rec addRoute (routeNode:RouteNode) (segs:NamedRouteSegment list) (idx:int, route:Route2) =
@@ -107,7 +110,7 @@ module Internal =
     | :? RouteMatchResult_NotFound ->
       match notFoundHandler with
       | null ->
-        failwith "Route not Found"
+        raise <| RouteNotFound
       | :? System.Delegate as handler ->
         let validVerbs : string[] = [||]
         handler.DynamicInvoke(validVerbs)
@@ -115,7 +118,7 @@ module Internal =
       let validVerbs = badVerbMatch.validVerbs
       match notFoundHandler with
       | null ->
-        failwithf "Only the HTTP verbs %A are supported on this route" validVerbs
+        raise <| BadVerb validVerbs
       | :? System.Delegate as handler ->
         handler.DynamicInvoke(validVerbs)
     | _ as x ->

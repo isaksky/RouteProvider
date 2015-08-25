@@ -62,6 +62,6 @@ Now we can use the router like this:
 
 ## Todo
 - Support other types of path segments than just ```int64```
-- Not found handlers
 - Add a concise way to do define multiple verbs per route
 - Allow routes to be defined in a seperate file
+- Configurable return type from handler functions?
