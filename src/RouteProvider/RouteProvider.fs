@@ -19,11 +19,12 @@ and RouteWithIdx = { route: Route2; idx: int}                    // -=-
 
 type RouteMatchResult () =
   do ()
-type RouteMatchResultBadVerb () =
+type RouteMatchResult_BadVerb (validVerbs:string[]) =
   inherit RouteMatchResult ()
-type RouteMatchResultNotFound () =
+  member x.validVerbs = validVerbs
+type RouteMatchResult_NotFound () =
   inherit RouteMatchResult ()
-type RouteMatchResultMatch (routeIdx:int, routeParams:obj[]) =
+type RouteMatchResult_Match (routeIdx:int, routeParams:obj[]) =
   inherit RouteMatchResult ()
   member x.routeIdx = routeIdx
   member x.routeParams = routeParams
@@ -78,15 +79,16 @@ module Internal =
             routeParams.Add(num :> obj)
             matchRoute' verb tl routeParams routeNode
           | None ->
-            RouteMatchResultNotFound() :> RouteMatchResult
+            RouteMatchResult_NotFound() :> RouteMatchResult
         else
-          RouteMatchResultNotFound() :> RouteMatchResult
+          RouteMatchResult_NotFound() :> RouteMatchResult
     | [] ->
       match routeTree.routes |> Seq.tryFind (fun r -> r.route.verb = verb) with
       | Some(route) ->
-        RouteMatchResultMatch(route.idx, (routeParams.ToArray())) :> RouteMatchResult
+        RouteMatchResult_Match(route.idx, (routeParams.ToArray())) :> RouteMatchResult
       | _ ->
-        RouteMatchResultNotFound() :> RouteMatchResult
+        let validVerbs = routeTree.routes |> List.map (fun r -> r.route.verb) |> Array.ofList
+        RouteMatchResult_BadVerb(validVerbs) :> RouteMatchResult
       
   let matchRoute(verb:string, pathStr:string, routeTree:RouteNode) =
     let partsAry = pathStr.Split('/')
@@ -97,16 +99,25 @@ module Internal =
                 |> List.ofArray
     matchRoute' verb parts (ResizeArray<obj>()) routeTree
 
-  let dispatchRoute(verb:string, pathStr:string, routeTree:RouteNode, handlers:obj[]) : obj =
+  let dispatchRoute(verb:string, pathStr:string, routeTree:RouteNode, notFoundHandler:obj, handlers:obj[]) : obj =
     match matchRoute(verb, pathStr, routeTree) with
-    | :? RouteMatchResultMatch as m ->
-      //let handlerFuncTypeDef = handlerFuncTypeDef <| Seq.length m.routeParams
+    | :? RouteMatchResult_Match as m ->
       let handler = handlers.[m.routeIdx] :?> System.Delegate
       handler.DynamicInvoke(m.routeParams)
-    | :? RouteMatchResultNotFound ->
-      null
-    | :? RouteMatchResultBadVerb ->
-      null
+    | :? RouteMatchResult_NotFound ->
+      match notFoundHandler with
+      | null ->
+        failwith "Route not Found"
+      | :? System.Delegate as handler ->
+        let validVerbs : string[] = [||]
+        handler.DynamicInvoke(validVerbs)
+    | :? RouteMatchResult_BadVerb as badVerbMatch ->
+      let validVerbs = badVerbMatch.validVerbs
+      match notFoundHandler with
+      | null ->
+        failwithf "Only the HTTP verbs %A are supported on this route" validVerbs
+      | :? System.Delegate as handler ->
+        handler.DynamicInvoke(validVerbs)
     | _ as x ->
       failwithf "Match result %A not implemented" x
 
@@ -128,7 +139,7 @@ type public RouteProvider(cfg : TypeProviderConfig) as this =
           |> List.map (fun (route:Route2) ->
             let routesTp = ProvidedTypeDefinition((routeTypeName2 route), Some typeof<obj[]>, HideObjectMethods = true (*, IsErased = false *))
             let dynRouteParams = route.routeSegments 
-                                 |> Seq.choose (function | NumericID(s) -> Some (s, typeof<int64>) 
+                                 |> Seq.choose (function | NumericID(s) -> Some (s, typeof<int64>)
                                                          | _ -> None)
                                  |> List.ofSeq
 
@@ -165,7 +176,10 @@ type public RouteProvider(cfg : TypeProviderConfig) as this =
             (routesTp, dynRouteParams))
         let routeTree = buildRouteTree routes
         Seq.iter (fst >> routerType.AddMember) typeParamPairs
-        let newTypeCtorParams = 
+
+        let ctorStaticParams = [ProvidedParameter("notFound", typeof<Action<string[]>>, optionalValue = null)]
+
+        let ctorDynParams = 
           typeParamPairs 
           |> List.map (fun (subTp, subTypeParams) ->
                           let subTypeParamTypes = subTypeParams 
@@ -175,7 +189,7 @@ type public RouteProvider(cfg : TypeProviderConfig) as this =
                           let handlerFuncType = handlerFuncTypeDef.MakeGenericType(subTypeParamTypes)
                           ProvidedParameter((subTp.Name), handlerFuncType))
 
-        let newTypeCtor = ProvidedConstructor(newTypeCtorParams, 
+        let newTypeCtor = ProvidedConstructor(ctorStaticParams @ ctorDynParams, 
                                               InvokeCode = fun args -> 
                                                 let argsAsObjs = List.map (fun e -> Expr.Coerce(e, typeof<obj>)) args
                                                 let _, routesExp = QuotationHelpers.recordExpr routeTree
@@ -200,12 +214,13 @@ type public RouteProvider(cfg : TypeProviderConfig) as this =
                                InvokeCode = fun args -> 
                                                 let selfExp = <@@ (%%(args.[0]) :> obj[]) @@>
                                                 let routeTreeExp = <@@ (%%selfExp :> obj[]).[0] :?> RouteNode @@>
-                                                let handlersExp = <@@ (%%selfExp :> obj[]).[1..] :> obj[] @@>
+                                                let notFoundHandlerExp = <@@ (%%selfExp :> obj[]).[1] :?> obj @@>
+                                                let handlersExp = <@@ (%%selfExp :> obj[]).[2..] :> obj[] @@>
 
                                                 let verbExp = <@@ (%%(args.[1]) :> string) @@>
                                                 let pathExp = <@@ (%%(args.[2]) :> string) @@>
 
-                                                <@@ Internal.dispatchRoute(%%verbExp, %%pathExp, %%routeTreeExp, %%handlersExp) @@>
+                                                <@@ Internal.dispatchRoute(%%verbExp, %%pathExp, %%routeTreeExp, %%notFoundHandlerExp, %%handlersExp) @@>
 
                                                 )
       | Failure (msg,_,_) ->
