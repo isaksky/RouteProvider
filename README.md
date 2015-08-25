@@ -61,6 +61,7 @@ Now we can use the router like this:
     -> "You asked for project 4321 and comment 1234"
 
 ## Todo
+- Allow a user arg to the RouteProvider, for passing to the handler functions
 - Support other types of path segments than just ```int64```
 - Add a concise way to do define multiple verbs per route
 - Allow routes to be defined in a seperate file
