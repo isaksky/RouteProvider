@@ -64,6 +64,7 @@ Now we can use the router like this:
 Note: if a matching route is not found, we throw an exception, unless a notFound handler is provided while instantiating the router, in which case that is called.
 
 ## Todo
+- Stop the dynamic dispatch
 - Allow a user arg to the RouteProvider, for passing to the handler functions
 - Support other types of path segments than just ```int64```
 - Add a concise way to do define multiple verbs per route
