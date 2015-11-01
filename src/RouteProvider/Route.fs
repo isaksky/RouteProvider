@@ -11,10 +11,6 @@ type NamedRouteSegment =
  | Constant of string
  | NumericID of string
 
-type Route(verb: string, routeSegments: ResizeArray<PathSegment>) =
-  member x.verb = verb
-  member x.routeSegments = routeSegments
-
-type Route2 =
+type Route =
    { routeSegments: NamedRouteSegment list
      verb: string}
