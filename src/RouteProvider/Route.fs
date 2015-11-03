@@ -13,4 +13,5 @@ type NamedRouteSegment =
 
 type Route =
    { routeSegments: NamedRouteSegment list
-     verb: string}
+     verb: string
+     routeName: string option }

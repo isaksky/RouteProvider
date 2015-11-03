@@ -27,8 +27,14 @@ and Method =
     functionParams: FunctionParam list}
 
 let routeName (route:Route) =
-  let routeParts = List.map  (function | Constant(name) | NumericID(name) -> name) (route.routeSegments)
-  sprintf "%s__%s" (route.verb) (String.concat "__" routeParts)
+  match route.routeName with
+  | Some(routeName) ->
+    routeName
+  | None ->
+    let routeParts = route.routeSegments |> List.choose  (function 
+      | Constant(name) -> Some(name)
+      | NumericID(_) -> None) 
+    sprintf "%s__%s" (route.verb) (String.concat "_" routeParts)
 
 let routeIVars (route:Route) =
   List.choose
@@ -46,7 +52,7 @@ let makeSubClasses (routes:Route list) =
   List.map routeSubClass routes
 
 let handlerName (route:Route) =
-  sprintf "%s_Handler" (routeName route)
+  sprintf "%sHandler" (routeName route)
 
 let makeHandlerCtorParam (route:Route) =
   { name = (handlerName route)
