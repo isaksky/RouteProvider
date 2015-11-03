@@ -266,14 +266,14 @@ let renderIf (routeIf:RouteIfTest) (w:ClassWriter) =
       let idx = routeIf.partIdx.Value
       match seg with 
       | Constant(name) ->
-        w.WriteFragment <| sprintf "%s (parts[%d] == \"%s\")" keyword idx name
+        w.WriteFragment <| sprintf "%s (parts[start + %d] == \"%s\")" keyword idx name
         using (w.block()) (fun _ ->
           routeIf.children |> List.iteri (fun i child ->
             renderIfAux child (seg :: precedingSegs) (i = 0) (depth + 1)))
       | NumericID(name) ->
-        w.WriteFragment <| sprintf "%s (StringIsAllDigits(parts[%d]))" keyword idx
+        w.WriteFragment <| sprintf "%s (StringIsAllDigits(parts[start + %d]))" keyword idx
         using (w.block()) (fun _ ->
-          w.WriteLine <| sprintf "var %s = long.Parse(parts[%d]);" name idx
+          w.WriteLine <| sprintf "var %s = long.Parse(parts[start + %d]);" name idx
           routeIf.children |> List.iteri (fun i child ->
             renderIfAux child (seg :: precedingSegs) (i = 0) (depth + 1)))
       if depth = 0 then w.WriteLine("break;")
@@ -301,14 +301,18 @@ let renderDispatchMethod (routeTree:RouteNode) (w:ClassWriter) =
 
   using (w.block()) (fun _ ->
     w.WriteLine <| "var parts = path.Split('/');"
-    w.WriteFragment("switch (parts.Length) ")
+    // Normalize starting and ending flash
+    w.WriteLine <| "var start = 0;"
+    w.WriteLine <| "if (parts[0] == \"\") { start = 1; }"
+    w.WriteLine <| "var endOffset = parts[parts.Length - 1] == \"\" ? 1 : 0;"
+    w.WriteFragment <| "switch (parts.Length - start - endOffset) "
     using (w.block()) (fun _ ->
       for n, group in routeGroups do
         w.WriteLine <| sprintf "case %d:" n
         using (w.indent()) (fun _ ->
           renderRouteGroupMatchTest group w)
-      w.WriteLine <| "default: throw new ArgumentException();" // Todo: replace with routenotfoundexception
-    ))
+      // Todo: replace with routenotfoundexception
+      w.WriteLine <| "default: throw new ArgumentException();"))
 
 let renderDigitCheckFn (w:ClassWriter) = 
   w.WriteFragment <| "static bool StringIsAllDigits(string s)"
@@ -326,21 +330,14 @@ let renderMainClass (klass:Klass) (routeTree:RouteNode) =
     w.WriteFragment <| sprintf "public class %s " (klass.name)
     using (w.block()) (fun _ ->
       renderDigitCheckFn w
-
       for k in klass.subClasses do renderSubClass k w
-
       match klass.ctor with
       | Some(ctorParams) ->
         renderMainCtor (klass.name) ctorParams w
         renderHandlerCtorParamsIvars ctorParams w
       | None -> failwith "Missing ctor"
-
       System.Diagnostics.Debug.Print <| sprintf "RouteTree:\n\n%A" routeTree
-
-      renderDispatchMethod routeTree w
-
-    )
-  )
+      renderDispatchMethod routeTree w))
   let code = w.content.ToString()
   System.Diagnostics.Debug.Print(code)
   code
