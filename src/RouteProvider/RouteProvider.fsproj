@@ -96,6 +96,7 @@
     <Compile Include="TpUtils.fs" />
     <Compile Include="Route.fs" />
     <Compile Include="RouteParsing.fs" />
+    <Compile Include="RouteCompiler.fs" />
     <Compile Include="RouteProvider.fs" />
   </ItemGroup>
   <ItemGroup>
