@@ -304,7 +304,7 @@ let renderDispatchMethod (routeTree:RouteNode) (w:ClassWriter) =
     // Normalize starting and ending flash
     w.WriteLine <| "var start = 0;"
     w.WriteLine <| "if (parts[0] == \"\") { start = 1; }"
-    w.WriteLine <| "var endOffset = parts[parts.Length - 1] == \"\" ? 1 : 0;"
+    w.WriteLine <| "var endOffset = parts.Length > 0 && parts[parts.Length - 1] == \"\" ? 1 : 0;"
     w.WriteFragment <| "switch (parts.Length - start - endOffset) "
     using (w.block()) (fun _ ->
       for n, group in routeGroups do

@@ -73,7 +73,7 @@ namespace IsakSky {
       var parts = path.Split('/');
       var start = 0;
       if (parts[0] == "") { start = 1; }
-      var endOffset = parts[parts.Length - 1] == "" ? 1 : 0;
+      var endOffset = parts.Length > 0 && parts[parts.Length - 1] == "" ? 1 : 0;
       switch (parts.Length - start - endOffset) {
         case 2:
           if (parts[start + 0] == "projects"){
