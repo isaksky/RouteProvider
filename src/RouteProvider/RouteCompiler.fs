@@ -7,14 +7,17 @@ type RouteProviderOptions =
    { typeName: string
      routesStr: string}
 
-type Klass = 
+type RouterKlass = 
   { name: string
     ctor: HandlerCtorParam list option
-    subClasses: Klass list
-    instanceVariables: InstanceVariable list
+    routeKlasses: RouteKlass list
     methods: Method list }
   static member Empty () =
-    { name = ""; ctor = None; subClasses = []; instanceVariables = []; methods = [] }
+    { name = ""; ctor = None; routeKlasses = []; methods = [] }
+and RouteKlass = 
+  { name: string
+    instanceVariables: InstanceVariable list
+    segments: NamedRouteSegment list}
 and DynamicParam = 
   | Int64Param of string
 and InstanceVariable = | InstanceVariable of  DynamicParam
@@ -44,9 +47,9 @@ let routeIVars (route:Route) =
     (route.routeSegments)
 
 let routeSubClass (route:Route) =
-  { Klass.Empty() with 
-      name = (routeName route) 
-      instanceVariables = (routeIVars route) }
+  { name = (routeName route) 
+    instanceVariables = (routeIVars route)
+    segments = route.routeSegments }
  
 let makeSubClasses (routes:Route list) =
   List.map routeSubClass routes
@@ -69,8 +72,7 @@ let makeCtor (routes:Route list) =
 let routes2Class (routes:Route list) (typeName: string) =
   { name = typeName
     ctor = (makeCtor routes)
-    subClasses = (makeSubClasses routes)
-    instanceVariables = []
+    routeKlasses = (makeSubClasses routes)
     methods = [] }
 
 type ClassWriter () =
@@ -99,13 +101,51 @@ type ClassWriter () =
   member x.Write(str:string) =
     x.content.Append(str) |> ignore
 
-let renderSubClass (klass:Klass) (w:ClassWriter) =
+let renderRouteKlass (klass:RouteKlass) (w:ClassWriter) =
   w.StartWrite <| sprintf "public class %s " (klass.name)
   using (w.block()) (fun _ ->
     for ivar in klass.instanceVariables do
       match ivar with
       | InstanceVariable(Int64Param(name)) ->
-        w.StartWriteLine <| sprintf "public readonly long %s;" name)
+        w.StartWriteLine <| sprintf "public long %s;" name
+
+    w.StartWrite("public override string ToString() ")
+    using (w.block()) (fun _ ->
+      let hasDynSeg = klass.segments |> List.tryFind (function | NumericID(_) -> true | _ -> false) |> Option.isSome
+      if hasDynSeg then
+        let rec buildFmtStr segs dynIdx ret =
+          match segs with
+          | [] -> ret
+          | Constant(name)::segs ->
+            buildFmtStr segs dynIdx (name::ret)
+          | NumericID(_)::segs ->
+            let s = sprintf "{%d}" dynIdx
+            buildFmtStr segs (dynIdx + 1) (s::ret)
+            
+        let fmtStr = 
+          buildFmtStr klass.segments 0 []
+          |> List.rev          
+          |> String.concat "/"
+          |> fun s -> "/" + s
+
+        let argsStr = 
+          klass.segments 
+            |> List.choose (fun seg ->
+              match seg with
+              | Constant(_) -> None
+              | NumericID(name) -> Some(sprintf "this.%s" name))
+            |> String.concat ", "
+
+        w.StartWriteLine <| sprintf "return string.Format(\"%s\", %s);" fmtStr argsStr
+      else
+        let constStr =
+           klass.segments 
+            |> List.map (fun seg ->
+              match seg with
+              | Constant(name) -> name
+              | _ -> failwith "Logic error")
+            |> String.concat "/"
+        w.StartWriteLine <| sprintf "return \"/%s\";" constStr))
 
 let paramListTypeString (paramList: DynamicParam list) =
   let genericTypes = 
@@ -317,7 +357,7 @@ let renderDigitCheckFn (w:ClassWriter) =
       w.StartWriteLine <| "if (c < '0' || c > '9') { return false; }")
     w.StartWriteLine <| "return true;")
 
-let renderMainClass (klass:Klass) (routeTree:RouteNode) =
+let renderMainClass (klass:RouterKlass) (routeTree:RouteNode) =
   let w = new ClassWriter()
   w.StartWriteLine "using System;"
   w.StartWrite "namespace IsakSky "
@@ -325,7 +365,7 @@ let renderMainClass (klass:Klass) (routeTree:RouteNode) =
     w.StartWrite <| sprintf "public class %s " (klass.name)
     using (w.block()) (fun _ ->
       renderDigitCheckFn w
-      for k in klass.subClasses do renderSubClass k w
+      for k in klass.routeKlasses do renderRouteKlass k w
       match klass.ctor with
       | Some(ctorParams) ->
         renderMainCtor (klass.name) ctorParams w

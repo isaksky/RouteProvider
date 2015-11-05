@@ -7,9 +7,10 @@ This is an F# Type provider made to generate types suitable for routing in a web
 ``` Fsharp
 [<Literal>]
 let routes = """
-  GET projects/{projectId} AS getProject
+  GET projects/{projectId} as getProject
   GET projects/{projectId}/comments/{commentId} as getProjectComments
   PUT projects/{projectId} as updateProject
+  GET projects/statistics
 """
 
 type MyRoutes = IsakSky.Routes<routes>
@@ -18,7 +19,9 @@ let router = MyRoutes(
               getProjectHandler = (fun projectId -> printfn "You asked for project %d" projectId),
               getProjectCommentsHandler = (fun projectId commentId ->
                                                                     printfn "You asked for project %d and comment %d" projectId commentId),
-              updateProjectHandler = (fun p -> printfn "Updated project %d" p)
+              updateProjectHandler = (fun p -> printfn "Updated project %d" p),
+              // If you don't provide a route name, one will be computed for you
+              GET__projects_statisticsHandler = (fun () -> printfn "You asked for project statistics")
              )
 ```
 
@@ -26,6 +29,11 @@ Now we can use the router like this:
 
     router.dispatchRoute("GET", "projects/4321/comments/1234")
     -> "You asked for project 4321 and comment 1234"
+
+You can also make paths in a typed way like this:
+
+    let url = MyRoutes.getProjectComments(projectId = 123L, commentId = 4L).ToString()
+    -> "/projects/123/comments/4"
 
 ## Todo
 - Option for user type that will passed to handler functions
@@ -36,15 +44,15 @@ Now we can use the router like this:
 
 ## Comparison with other approaches
 
-| Project         | Route definition mechanism                | Bidirectional? |   Type safety |
-|-----------------|:------------------------------------------|:---------------|:--------------|
-| ASP.NET MVC     | Reflection on attributes and method naming conventions  | No             | Limited          |
-| Freya           | Uri Templates                             | Yes            | None          | 
-| Suave.IO        | F# sprintf format string                  | No             | Yes           |
-| bidi (Clojure)  | Data                                      | Yes            | None          |
-| Ruby on Rails   | Internal Ruby DSL                         | Yes            | None |
-| Yesod (Haskell) | Types generated from Route DSL via Template Haskell       | Yes            | Full          |
-| RouteProvider   | Types generated from Route DSL via #F Type Provider    | Yes | Full |
+| Project         | Route definition mechanism                             | Bidirectional? | Type safety   |
+|-----------------|:-------------------------------------------------------|:---------------|:--------------|
+| ASP.NET MVC     | Reflection on attributes and method naming conventions | No             | Limited       |
+| Freya           | Uri Templates                                          | Yes            | None          | 
+| Suave.IO        | F# sprintf format string                               | No             | Yes           |
+| bidi (Clojure)  | Data                                                   | Yes            | None          |
+| Ruby on Rails   | Internal Ruby DSL                                      | Yes            | None          |
+| Yesod (Haskell) | Types generated from Route DSL via Template Haskell    | Yes            | Full          |
+| RouteProvider   | Types generated from Route DSL via #F Type Provider    | Yes            | Full          |
 
 ## How does it work?
 
@@ -61,26 +69,43 @@ namespace IsakSky {
       return true;
     }
     public class getProject {
-      public readonly long projectId;
+      public long projectId;
+      public override string ToString() {
+        return string.Format("/projects/{0}", this.projectId);
+      }
     }
     public class getProjectComments {
-      public readonly long projectId;
-      public readonly long commentId;
+      public long projectId;
+      public long commentId;
+      public override string ToString() {
+        return string.Format("/projects/{0}/comments/{1}", this.projectId, this.commentId);
+      }
     }
     public class updateProject {
-      public readonly long projectId;
+      public long projectId;
+      public override string ToString() {
+        return string.Format("/projects/{0}", this.projectId);
+      }
+    }
+    public class GET__projects_statistics {
+      public override string ToString() {
+        return "/projects/statistics";
+      }
     }
     public MyRoutes(
       Action<long> getProjectHandler,
       Action<long, long> getProjectCommentsHandler,
-      Action<long> updateProjectHandler) {
+      Action<long> updateProjectHandler,
+      Action GET__projects_statisticsHandler) {
         this.getProjectHandler = getProjectHandler;
         this.getProjectCommentsHandler = getProjectCommentsHandler;
         this.updateProjectHandler = updateProjectHandler;
+        this.GET__projects_statisticsHandler = GET__projects_statisticsHandler;
       }
     public readonly Action<long> getProjectHandler;
     public readonly Action<long, long> getProjectCommentsHandler;
     public readonly Action<long> updateProjectHandler;
+    public readonly Action GET__projects_statisticsHandler;
     public void DispatchRoute(string verb, string path) {
       var parts = path.Split('/');
       var start = 0;
@@ -89,7 +114,10 @@ namespace IsakSky {
       switch (parts.Length - start - endOffset) {
         case 2:
           if (parts[start + 0] == "projects"){
-            if (StringIsAllDigits(parts[start + 1])){
+            if (parts[start + 1] == "statistics"){
+              if (verb == "GET") { this.GET__projects_statisticsHandler(); return; }
+            }
+            else if (StringIsAllDigits(parts[start + 1])){
               var projectId = long.Parse(parts[start + 1]);
               if (verb == "PUT") { this.updateProjectHandler(projectId); return; }
               else if (verb == "GET") { this.getProjectHandler(projectId); return; }
