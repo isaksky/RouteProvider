@@ -36,8 +36,8 @@ You can also make paths in a typed way like this:
     -> "/projects/123/comments/4"
 
 ## Todo
-- Option for user type that will passed to handler functions
-- Option for user type that handler functions must return
+- Option for user type that will passed to handler functions (e.g., OwinContext)
+- Option for user type that handler functions must return (e.g., HttpWebResponse)
 - Support other types of path segments than just ```int64```
 - Allow routes to be defined in a seperate file
 
