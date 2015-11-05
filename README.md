@@ -40,7 +40,6 @@ You can also make paths in a typed way like this:
 - Option for user type that handler functions must return
 - Support other types of path segments than just ```int64```
 - Allow routes to be defined in a seperate file
-- Implement ToString() of generated route types
 
 ## Comparison with other approaches
 
