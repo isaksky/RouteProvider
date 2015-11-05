@@ -34,6 +34,18 @@ Now we can use the router like this:
 - Allow routes to be defined in a seperate file
 - Implement ToString() of generated route types
 
+## Comparison with other approaches
+
+| Project         | Route definition mechanism                | Bidirectional? |   Type safety |
+|-----------------|:------------------------------------------|:---------------|:--------------|
+| ASP.NET MVC     | Reflection on attributes and method naming conventions  | No             | Limited          |
+| Freya           | Uri Templates                             | Yes            | None          | 
+| Suave.IO        | F# sprintf format string                  | No             | Yes           |
+| bidi (Clojure)  | Data                                      | Yes            | None          |
+| Ruby on Rails   | Internal Ruby DSL                         | Yes            | None |
+| Yesod (Haskell) | Types generated from Route DSL via Template Haskell       | Yes            | Full          |
+| RouteProvider   | Types generated from Route DSL via #F Type Provider    | Yes | Full |
+
 ## How does it work?
 
 It generates CSharp types. For example, for the routes defined above, it generates the following CSharp:
