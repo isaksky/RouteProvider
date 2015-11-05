@@ -87,12 +87,12 @@ type ClassWriter () =
     { new System.IDisposable with 
         member x.Dispose() = 
           indentation <- indentation - 2
-          w.WriteLine("}") }
-  member x.WriteLine(line: string) = 
+          w.StartWriteLine("}") }
+  member x.StartWriteLine(line: string) = 
     let pfx = new string(' ', indentation)
     let s = sprintf "%s%s\n" pfx line
     x.content.Append(s) |> ignore
-  member x.WriteFragment(str:string) =
+  member x.StartWrite(str:string) =
     let pfx = new string(' ', indentation)
     let s = sprintf "%s%s" pfx str
     x.content.Append(s) |> ignore
@@ -100,15 +100,12 @@ type ClassWriter () =
     x.content.Append(str) |> ignore
 
 let renderSubClass (klass:Klass) (w:ClassWriter) =
-  w.WriteFragment <| sprintf "public class %s " (klass.name)
+  w.StartWrite <| sprintf "public class %s " (klass.name)
   using (w.block()) (fun _ ->
     for ivar in klass.instanceVariables do
       match ivar with
       | InstanceVariable(Int64Param(name)) ->
-        w.WriteLine <| sprintf "public readonly long %s;" name
-      //| _ -> failwith "Ivar not implemented"
-    )
-  
+        w.StartWriteLine <| sprintf "public readonly long %s;" name)
 
 let paramListTypeString (paramList: DynamicParam list) =
   let genericTypes = 
@@ -121,28 +118,26 @@ let paramListTypeString (paramList: DynamicParam list) =
     "Action"
 
 let renderMainCtor (klassName:string) (ctorParams:HandlerCtorParam list) (w:ClassWriter) =
-  w.WriteLine <| sprintf "public %s(" klassName
+  w.StartWriteLine <| sprintf "public %s(" klassName
 
   using (w.indent()) (fun _ ->
       let ctorParams = ctorParams |> Array.ofList
       for i in [0..ctorParams.Length - 1] do
         let ctorParam = ctorParams.[i]
         let ctorArgs = ctorParam.handlerArgs |> List.map (function | FunctionParam(p) -> p)
-        w.WriteFragment <| sprintf "%s %s" (paramListTypeString ctorArgs) (ctorParam.name)
+        w.StartWrite <| sprintf "%s %s" (paramListTypeString ctorArgs) (ctorParam.name)
         if i <> ctorParams.Length - 1 then
           w.Write(",\n")  
       
       w.Write(") ")
       using (w.block()) (fun _ ->
         for ctorParam in ctorParams do
-            w.WriteLine <| (sprintf "this.%s = %s;" (ctorParam.name) (ctorParam.name))
-      )
-  )
+            w.StartWriteLine <| (sprintf "this.%s = %s;" (ctorParam.name) (ctorParam.name))))
 
 let renderHandlerCtorParamsIvars (ctorParams:HandlerCtorParam list) (w:ClassWriter) =
   for ctorParam in ctorParams do
     let pms = ctorParam.handlerArgs |> List.map (function | FunctionParam(p) -> p)
-    w.WriteLine <| (sprintf "public readonly %s %s;" (paramListTypeString pms) (ctorParam.name))
+    w.StartWriteLine <| (sprintf "public readonly %s %s;" (paramListTypeString pms) (ctorParam.name))
 
 type RouteNode = 
   { endPoints: Endpoint list
@@ -266,17 +261,17 @@ let renderIf (routeIf:RouteIfTest) (w:ClassWriter) =
       let idx = routeIf.partIdx.Value
       match seg with 
       | Constant(name) ->
-        w.WriteFragment <| sprintf "%s (parts[start + %d] == \"%s\")" keyword idx name
+        w.StartWrite <| sprintf "%s (parts[start + %d] == \"%s\")" keyword idx name
         using (w.block()) (fun _ ->
           routeIf.children |> List.iteri (fun i child ->
             renderIfAux child (seg :: precedingSegs) (i = 0) (depth + 1)))
       | NumericID(name) ->
-        w.WriteFragment <| sprintf "%s (StringIsAllDigits(parts[start + %d]))" keyword idx
+        w.StartWrite <| sprintf "%s (StringIsAllDigits(parts[start + %d]))" keyword idx
         using (w.block()) (fun _ ->
-          w.WriteLine <| sprintf "var %s = long.Parse(parts[start + %d]);" name idx
+          w.StartWriteLine <| sprintf "var %s = long.Parse(parts[start + %d]);" name idx
           routeIf.children |> List.iteri (fun i child ->
             renderIfAux child (seg :: precedingSegs) (i = 0) (depth + 1)))
-      if depth = 0 then w.WriteLine("break;")
+      if depth = 0 then w.StartWriteLine("break;")
     | Endpoint(endpoint) ->
       let args = 
         precedingSegs 
@@ -285,7 +280,7 @@ let renderIf (routeIf:RouteIfTest) (w:ClassWriter) =
           | NumericID(n) -> Some(n) 
           | _ -> None)
         |> String.concat ", "
-      w.WriteLine <| sprintf "%s (verb == \"%s\") { this.%s(%s); return; }" keyword (endpoint.verb) (endpoint.handlerName) args
+      w.StartWriteLine <| sprintf "%s (verb == \"%s\") { this.%s(%s); return; }" keyword (endpoint.verb) (endpoint.handlerName) args
 
   renderIfAux routeIf [] true 0
 
@@ -297,37 +292,37 @@ let renderRouteGroupMatchTest (group:RouteTreeFragment list) (w:ClassWriter) =
 let renderDispatchMethod (routeTree:RouteNode) (w:ClassWriter) =
   let routeGroups = routeTree |> flattenRouteTree |> groupRoutes
   System.Diagnostics.Debug.Print <| sprintf "routeGroups:\n\n%A" routeGroups
-  w.WriteFragment("public void DispatchRoute(string verb, string path) ")
+  w.StartWrite("public void DispatchRoute(string verb, string path) ")
 
   using (w.block()) (fun _ ->
-    w.WriteLine <| "var parts = path.Split('/');"
+    w.StartWriteLine <| "var parts = path.Split('/');"
     // Normalize starting and ending flash
-    w.WriteLine <| "var start = 0;"
-    w.WriteLine <| "if (parts[0] == \"\") { start = 1; }"
-    w.WriteLine <| "var endOffset = parts.Length > 0 && parts[parts.Length - 1] == \"\" ? 1 : 0;"
-    w.WriteFragment <| "switch (parts.Length - start - endOffset) "
+    w.StartWriteLine <| "var start = 0;"
+    w.StartWriteLine <| "if (parts[0] == \"\") { start = 1; }"
+    w.StartWriteLine <| "var endOffset = parts.Length > 0 && parts[parts.Length - 1] == \"\" ? 1 : 0;"
+    w.StartWrite <| "switch (parts.Length - start - endOffset) "
     using (w.block()) (fun _ ->
       for n, group in routeGroups do
-        w.WriteLine <| sprintf "case %d:" n
+        w.StartWriteLine <| sprintf "case %d:" n
         using (w.indent()) (fun _ ->
           renderRouteGroupMatchTest group w)
       // Todo: replace with routenotfoundexception
-      w.WriteLine <| "default: throw new ArgumentException();"))
+      w.StartWriteLine <| "default: throw new ArgumentException();"))
 
 let renderDigitCheckFn (w:ClassWriter) = 
-  w.WriteFragment <| "static bool StringIsAllDigits(string s)"
+  w.StartWrite <| "static bool StringIsAllDigits(string s)"
   using (w.block()) (fun _ ->
-    w.WriteFragment <| "foreach (char c in s)"
+    w.StartWrite <| "foreach (char c in s)"
     using (w.block()) (fun _ ->
-      w.WriteLine <| "if (c < '0' || c > '9') { return false; }")
-    w.WriteLine <| "return true;")
+      w.StartWriteLine <| "if (c < '0' || c > '9') { return false; }")
+    w.StartWriteLine <| "return true;")
 
 let renderMainClass (klass:Klass) (routeTree:RouteNode) =
   let w = new ClassWriter()
-  w.WriteLine "using System;"
-  w.WriteFragment "namespace IsakSky "
+  w.StartWriteLine "using System;"
+  w.StartWrite "namespace IsakSky "
   using (w.block()) (fun _ ->
-    w.WriteFragment <| sprintf "public class %s " (klass.name)
+    w.StartWrite <| sprintf "public class %s " (klass.name)
     using (w.block()) (fun _ ->
       renderDigitCheckFn w
       for k in klass.subClasses do renderSubClass k w
