@@ -13,7 +13,7 @@ let routes = """
   GET projects/statistics
 """
 
-type MyRoutes = IsakSky.Routes<routes>
+type MyRoutes = IsakSky.RouteProvider<routes>
 
 let router = MyRoutes(
               getProjectHandler = (fun projectId -> printfn "You asked for project %d" projectId),

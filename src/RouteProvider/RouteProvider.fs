@@ -4,10 +4,10 @@ open System
 open System.Reflection
 open Microsoft.FSharp.Core.CompilerServices
 
-type Routes() = inherit obj()
+type RouteProvider() = inherit obj()
 
 [<TypeProvider>]
-type RouteProvider() =
+type RouteProviderCore() =
     let namespaceName = "IsakSky"
     let invalidation = new Event<_,_>()
 
@@ -55,14 +55,14 @@ type RouteProvider() =
 
     interface IProvidedNamespace with
         member this.ResolveTypeName(typeName) =
-            typeof<Routes>
+            typeof<RouteProvider>
         member this.NamespaceName
             with get() =
                 namespaceName
         member this.GetNestedNamespaces() =
             [| |]
         member this.GetTypes() =
-            [| typeof<Routes> |]
+            [| typeof<RouteProvider> |]
 
 [<assembly: TypeProviderAssembly>]
 do ()
