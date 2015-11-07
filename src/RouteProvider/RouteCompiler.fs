@@ -5,7 +5,7 @@ open System.Text
 
 type RouteProviderOptions =
    { typeName: string
-     routesStr: string}
+     routesStr: string }
 
 type RouterKlass = 
   { name: string
@@ -17,17 +17,17 @@ type RouterKlass =
 and RouteKlass = 
   { name: string
     instanceVariables: InstanceVariable list
-    segments: NamedRouteSegment list}
+    segments: NamedRouteSegment list }
 and DynamicParam = 
   | Int64Param of string
 and InstanceVariable = | InstanceVariable of  DynamicParam
 and FunctionParam = | FunctionParam of DynamicParam
 and HandlerCtorParam =
   { name: string
-    handlerArgs: FunctionParam list}
+    handlerArgs: FunctionParam list }
 and Method =
   { name: string
-    functionParams: FunctionParam list}
+    functionParams: FunctionParam list }
 
 let routeName (route:Route) =
   match route.routeName with
@@ -346,16 +346,34 @@ let renderDispatchMethod (routeTree:RouteNode) (w:ClassWriter) =
         w.StartWriteLine <| sprintf "case %d:" n
         using (w.indent()) (fun _ ->
           renderRouteGroupMatchTest group w)
-      // Todo: replace with routenotfoundexception
-      w.StartWriteLine <| "default: throw new ArgumentException();"))
+      w.StartWriteLine <| "default: break;")
+    w.StartWriteLine <| "throw new RouteNotMatchedException(verb, path);")
 
-let renderDigitCheckFn (w:ClassWriter) = 
-  w.StartWrite <| "static bool StringIsAllDigits(string s)"
-  using (w.block()) (fun _ ->
-    w.StartWrite <| "foreach (char c in s)"
-    using (w.block()) (fun _ ->
-      w.StartWriteLine <| "if (c < '0' || c > '9') { return false; }")
-    w.StartWriteLine <| "return true;")
+let digitCheckFn = """
+static bool StringIsAllDigits(string s) {
+  foreach (char c in s) {
+    if (c < '0' || c > '9') { return false; }
+  }
+  return true;
+}"""
+
+let routeNotMatchedEx = """
+public class RouteNotMatchedException : Exception {
+  public string Verb { get; private set; }
+  public string Path { get; private set; }
+  public RouteNotMatchedException(string verb, string path) {
+    this.Verb = verb;
+    this.Path = path;
+  }
+}"""
+let renderMultiLineStr (w:ClassWriter) (s:string) =
+  for line in s.Split('\n') do
+    if not <| System.String.IsNullOrWhiteSpace(s) then
+      w.StartWriteLine <| line
+
+let renderUtilities (w:ClassWriter) = 
+  renderMultiLineStr w digitCheckFn
+  renderMultiLineStr w routeNotMatchedEx
 
 let renderMainClass (klass:RouterKlass) (routeTree:RouteNode) =
   let w = new ClassWriter()
@@ -364,7 +382,6 @@ let renderMainClass (klass:RouterKlass) (routeTree:RouteNode) =
   using (w.block()) (fun _ ->
     w.StartWrite <| sprintf "public class %s " (klass.name)
     using (w.block()) (fun _ ->
-      renderDigitCheckFn w
       for k in klass.routeKlasses do renderRouteKlass k w
       match klass.ctor with
       | Some(ctorParams) ->
@@ -372,10 +389,10 @@ let renderMainClass (klass:RouterKlass) (routeTree:RouteNode) =
         renderHandlerCtorParamsIvars ctorParams w
       | None -> failwith "Missing ctor"
       System.Diagnostics.Debug.Print <| sprintf "RouteTree:\n\n%A" routeTree
-      renderDispatchMethod routeTree w))
-  let code = w.content.ToString()
-  System.Diagnostics.Debug.Print(code)
-  code
+      w.Write("\n")
+      renderDispatchMethod routeTree w
+      renderUtilities w))
+  w.content.ToString()
 
 let compileRoutes (options:RouteProviderOptions) =
   match runParserOnString RouteParsing.pRoutes () "User routes" (options.routesStr) with

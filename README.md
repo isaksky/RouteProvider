@@ -61,12 +61,6 @@ It generates CSharp types. For example, for the routes defined above, it generat
 using System;
 namespace IsakSky {
   public class MyRoutes {
-    static bool StringIsAllDigits(string s){
-      foreach (char c in s){
-        if (c < '0' || c > '9') { return false; }
-      }
-      return true;
-    }
     public class getProject {
       public long projectId;
       public override string ToString() {
@@ -105,6 +99,7 @@ namespace IsakSky {
     public readonly Action<long, long> getProjectCommentsHandler;
     public readonly Action<long> updateProjectHandler;
     public readonly Action GET__projects_statisticsHandler;
+
     public void DispatchRoute(string verb, string path) {
       var parts = path.Split('/');
       var start = 0;
@@ -136,7 +131,24 @@ namespace IsakSky {
             }
           }
           break;
-        default: throw new ArgumentException();
+        default: break;
+      }
+      throw new RouteNotMatchedException(verb, path);
+    }
+    
+    static bool StringIsAllDigits(string s) {
+      foreach (char c in s) {
+        if (c < '0' || c > '9') { return false; }
+      }
+      return true;
+    }
+    
+    public class RouteNotMatchedException : Exception {
+      public string Verb { get; private set; }
+      public string Path { get; private set; }
+      public RouteNotMatchedException(string verb, string path) {
+        this.Verb = verb;
+        this.Path = path;
       }
     }
   }
