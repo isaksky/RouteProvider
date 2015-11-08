@@ -30,9 +30,9 @@ Now we can use the router like this:
     router.dispatchRoute("GET", "projects/4321/comments/1234")
     -> "You asked for project 4321 and comment 1234"
 
-You can also make paths in a typed way like this:
+You can also build paths in a typed way like this:
 
-    let url = MyRoutes.getProjectComments(projectId = 123L, commentId = 4L).ToString()
+    let url = MyRoutes.Builders.getProjectComments(123L,4L)
     -> "/projects/123/comments/4"
 
 ## Todo

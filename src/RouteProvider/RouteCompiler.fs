@@ -10,17 +10,16 @@ type RouteProviderOptions =
 type RouterKlass = 
   { name: string
     ctor: HandlerCtorParam list option
-    routeKlasses: RouteKlass list
+    routeKlasses: RouteBuilder list
     methods: Method list }
   static member Empty () =
     { name = ""; ctor = None; routeKlasses = []; methods = [] }
-and RouteKlass = 
+and RouteBuilder = 
   { name: string
-    instanceVariables: InstanceVariable list
+    arguments: FunctionParam list
     segments: NamedRouteSegment list }
 and DynamicParam = 
   | Int64Param of string
-and InstanceVariable = | InstanceVariable of  DynamicParam
 and FunctionParam = | FunctionParam of DynamicParam
 and HandlerCtorParam =
   { name: string
@@ -43,12 +42,12 @@ let routeIVars (route:Route) =
   List.choose
     (function
       | Constant(_) -> None
-      | NumericID(name) -> Some(InstanceVariable(Int64Param(name)))) 
+      | NumericID(name) -> Some(FunctionParam(Int64Param(name)))) 
     (route.routeSegments)
 
 let routeSubClass (route:Route) =
   { name = (routeName route) 
-    instanceVariables = (routeIVars route)
+    arguments = (routeIVars route)
     segments = route.routeSegments }
  
 let makeSubClasses (routes:Route list) =
@@ -101,51 +100,54 @@ type ClassWriter () =
   member x.Write(str:string) =
     x.content.Append(str) |> ignore
 
-let renderRouteKlass (klass:RouteKlass) (w:ClassWriter) =
-  w.StartWrite <| sprintf "public class %s " (klass.name)
+let renderRouteBuilder (klass:RouteBuilder) (w:ClassWriter) =
+  w.StartWrite <| sprintf "public static string %s(" (klass.name)
+  
+  let argStrs =
+    klass.arguments
+    |> List.map (function
+      | FunctionParam(Int64Param(name)) ->
+        sprintf "long %s" name)
+
+  w.Write <| String.concat ", " argStrs
+  w.Write ")"
+
   using (w.block()) (fun _ ->
-    for ivar in klass.instanceVariables do
-      match ivar with
-      | InstanceVariable(Int64Param(name)) ->
-        w.StartWriteLine <| sprintf "public long %s;" name
-
-    w.StartWrite("public override string ToString() ")
-    using (w.block()) (fun _ ->
-      let hasDynSeg = klass.segments |> List.tryFind (function | NumericID(_) -> true | _ -> false) |> Option.isSome
-      if hasDynSeg then
-        let rec buildFmtStr segs dynIdx ret =
-          match segs with
-          | [] -> ret
-          | Constant(name)::segs ->
-            buildFmtStr segs dynIdx (name::ret)
-          | NumericID(_)::segs ->
-            let s = sprintf "{%d}" dynIdx
-            buildFmtStr segs (dynIdx + 1) (s::ret)
+    let hasDynSeg = klass.segments |> List.tryFind (function | NumericID(_) -> true | _ -> false) |> Option.isSome
+    if hasDynSeg then
+      let rec buildFmtStr segs dynIdx ret =
+        match segs with
+        | [] -> ret
+        | Constant(name)::segs ->
+          buildFmtStr segs dynIdx (name::ret)
+        | NumericID(_)::segs ->
+          let s = sprintf "{%d}" dynIdx
+          buildFmtStr segs (dynIdx + 1) (s::ret)
             
-        let fmtStr = 
-          buildFmtStr klass.segments 0 []
-          |> List.rev          
-          |> String.concat "/"
-          |> fun s -> "/" + s
+      let fmtStr = 
+        buildFmtStr klass.segments 0 []
+        |> List.rev          
+        |> String.concat "/"
+        |> fun s -> "/" + s
 
-        let argsStr = 
+      let argsStr = 
+        klass.segments 
+          |> List.choose (fun seg ->
+            match seg with
+            | Constant(_) -> None
+            | NumericID(name) -> Some(name))
+          |> String.concat ", "
+
+      w.StartWriteLine <| sprintf "return string.Format(\"%s\", %s);" fmtStr argsStr
+    else
+      let constStr =
           klass.segments 
-            |> List.choose (fun seg ->
-              match seg with
-              | Constant(_) -> None
-              | NumericID(name) -> Some(sprintf "this.%s" name))
-            |> String.concat ", "
-
-        w.StartWriteLine <| sprintf "return string.Format(\"%s\", %s);" fmtStr argsStr
-      else
-        let constStr =
-           klass.segments 
-            |> List.map (fun seg ->
-              match seg with
-              | Constant(name) -> name
-              | _ -> failwith "Logic error")
-            |> String.concat "/"
-        w.StartWriteLine <| sprintf "return \"/%s\";" constStr))
+          |> List.map (fun seg ->
+            match seg with
+            | Constant(name) -> name
+            | _ -> failwith "Logic error")
+          |> String.concat "/"
+      w.StartWriteLine <| sprintf "return \"/%s\";" constStr)
 
 let paramListTypeString (paramList: DynamicParam list) =
   let genericTypes = 
@@ -382,7 +384,10 @@ let renderMainClass (klass:RouterKlass) (routeTree:RouteNode) =
   using (w.block()) (fun _ ->
     w.StartWrite <| sprintf "public class %s " (klass.name)
     using (w.block()) (fun _ ->
-      for k in klass.routeKlasses do renderRouteKlass k w
+      w.StartWrite "public static class Builders"
+      using (w.block()) (fun _ -> 
+        for k in klass.routeKlasses do renderRouteBuilder k w 
+      )
       match klass.ctor with
       | Some(ctorParams) ->
         renderMainCtor (klass.name) ctorParams w

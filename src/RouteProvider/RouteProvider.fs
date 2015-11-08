@@ -45,7 +45,10 @@ type RouteProviderCore() =
             | :? ConstructorInfo as ctor ->
                 Quotations.Expr.NewObject(ctor, Array.toList parameters) 
             | :? MethodInfo as mi ->
-                Quotations.Expr.Call(parameters.[0], mi, Array.toList parameters.[1..])
+              if mi.IsStatic then
+                Quotations.Expr.Call(mi, Array.toList parameters)
+              else 
+                  Quotations.Expr.Call(parameters.[0], mi, Array.toList parameters.[1..])
             | _ ->
                 NotImplementedException(sprintf "Not Implemented: ITypeProvider.GetInvokerExpression(%A, %A)" syntheticMethodBase parameters) |> raise
         member this.GetGeneratedAssemblyContents(assembly) =

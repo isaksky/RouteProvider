@@ -19,9 +19,7 @@ let router = MyRoutes(
               GET__projects_statisticsHandler = (fun () -> printfn "You asked for project statistics")
              )
 
-let url = MyRoutes.getProjectComments(projectId = 123L, commentId = 4L).ToString() // "/projects/123/comments/4"
-
-let url2 = MyRoutes.GET__projects_statistics()
-
+MyRoutes.Builders.getProject(1L)
+MyRoutes.Builders.getProjectComments(1L, 123L)
 router.DispatchRoute("GET", "/projects/123")
 router.DispatchRoute("GET", "/projects/123/comments/4/")
