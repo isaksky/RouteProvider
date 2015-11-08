@@ -26,7 +26,7 @@
     <OtherFlags>--warnon:1182</OtherFlags>
     <StartAction>Program</StartAction>
     <StartProgram>C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\devenv.exe</StartProgram>
-    <StartArguments>C:\Users\isak\dev\TpTest\TpTest\TpTest.fsproj</StartArguments>
+    <StartArguments>..\..\..\RouteProvider.Samples\Simple\Simple\Simple.fsproj</StartArguments>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
