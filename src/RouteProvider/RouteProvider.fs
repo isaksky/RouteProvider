@@ -18,6 +18,14 @@ type RouteProviderCore() =
          override this.ParameterType with get() = typeof<string>
          override this.Attributes with get() = ParameterAttributes.None
       }
+      { new ParameterInfo() with
+         override this.Name with get() = "inputTypeName"
+         override this.Position with get() = 1
+         override this.ParameterType with get() = typeof<string>
+         override this.Attributes with get() = ParameterAttributes.Optional
+         override this.RawDefaultValue with get() = "" :> obj
+         override this.DefaultValue with get() = "" :> obj
+      }
     |]
     
     interface ITypeProvider with
@@ -27,19 +35,21 @@ type RouteProviderCore() =
         member this.GetNamespaces() =
             [| this |]
         member this.GetStaticParameters(typeWithoutArguments) =
-            staticParams
+          System.Diagnostics.Debug.Print <| sprintf  "this.GetStaticParameters :: %A" typeWithoutArguments
+          staticParams
         member this.ApplyStaticArguments(typeWithoutArguments, typeNameWithArguments, staticArguments) =
             let typeName = typeNameWithArguments.[typeNameWithArguments.Length - 1]
 
-            match staticArguments with
-            | [|:? string as routeStr|] ->
-              let compilerArgs = { 
-                RouteCompiler.RouteProviderOptions.routesStr = routeStr
-                RouteCompiler.RouteProviderOptions.typeName = typeName 
-              }
-              RouteCompiler.compileRoutes compilerArgs
-            | _ ->
-              failwithf "Bad params: %A" staticArguments
+            let compilerArgs = 
+              match staticArguments with
+              | [|:? string as routeStr; :? string as inputTypeName|] ->
+                { RouteCompiler.RouteProviderOptions.routesStr = routeStr
+                  RouteCompiler.RouteProviderOptions.typeName = typeName
+                  RouteCompiler.RouteProviderOptions.inputTypeName = if inputTypeName = "" then None else Some(inputTypeName) }
+              | _ ->
+                failwithf "Bad params: %A" staticArguments
+
+            RouteCompiler.compileRoutes compilerArgs
         member this.GetInvokerExpression(syntheticMethodBase, parameters) =
             match syntheticMethodBase with
             | :? ConstructorInfo as ctor ->

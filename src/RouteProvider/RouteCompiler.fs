@@ -5,15 +5,17 @@ open System.Text
 
 type RouteProviderOptions =
    { typeName: string
-     routesStr: string }
+     routesStr: string
+     inputTypeName: string option }
 
 type RouterKlass = 
   { name: string
     ctor: HandlerCtorParam list option
     routeKlasses: RouteBuilder list
-    methods: Method list }
-  static member Empty () =
-    { name = ""; ctor = None; routeKlasses = []; methods = [] }
+    methods: Method list
+    inputTypeName: string option }
+//  static member Empty () =
+    //{ name = ""; ctor = None; routeKlasses = []; methods = [] }
 and RouteBuilder = 
   { name: string
     arguments: FunctionParam list
@@ -50,7 +52,7 @@ let routeSubClass (route:Route) =
     arguments = (routeIVars route)
     segments = route.routeSegments }
  
-let makeSubClasses (routes:Route list) =
+let makeRouteKlasses (routes:Route list) =
   List.map routeSubClass routes
 
 let handlerName (route:Route) =
@@ -68,11 +70,12 @@ let makeHandlerCtorParam (route:Route) =
 let makeCtor (routes:Route list) = 
   Some((routes |> List.map makeHandlerCtorParam))
 
-let routes2Class (routes:Route list) (typeName: string) =
-  { name = typeName
+let routes2Class (routes:Route list) (options: RouteProviderOptions) =
+  { name = options.typeName
     ctor = (makeCtor routes)
-    routeKlasses = (makeSubClasses routes)
-    methods = [] }
+    routeKlasses = (makeRouteKlasses routes)
+    methods = []
+    inputTypeName = options.inputTypeName }
 
 type ClassWriter () =
   let mutable indentation = 0
@@ -149,17 +152,23 @@ let renderRouteBuilder (klass:RouteBuilder) (w:ClassWriter) =
           |> String.concat "/"
       w.StartWriteLine <| sprintf "return \"/%s\";" constStr)
 
-let paramListTypeString (paramList: DynamicParam list) =
+let paramListTypeString (paramList: DynamicParam list) (inputTypeName:string option) =
   let genericTypes = 
     paramList
     |> List.map (function | Int64Param(_) -> "long")
 
-  if genericTypes.Length > 0 then
-    sprintf "Action<%s>" (String.concat ", " genericTypes)
+  let types = 
+    match inputTypeName with
+    | Some(inputTypeName) ->
+      inputTypeName :: genericTypes
+    | None -> genericTypes
+
+  if types.Length > 0 then
+    sprintf "Action<%s>" (String.concat ", " types)
   else
     "Action"
 
-let renderMainCtor (klassName:string) (ctorParams:HandlerCtorParam list) (w:ClassWriter) =
+let renderMainCtor (klassName:string) (ctorParams:HandlerCtorParam list) (inputTypeName: string option) (w:ClassWriter) =
   w.StartWriteLine <| sprintf "public %s(" klassName
 
   using (w.indent()) (fun _ ->
@@ -167,7 +176,7 @@ let renderMainCtor (klassName:string) (ctorParams:HandlerCtorParam list) (w:Clas
       for i in [0..ctorParams.Length - 1] do
         let ctorParam = ctorParams.[i]
         let ctorArgs = ctorParam.handlerArgs |> List.map (function | FunctionParam(p) -> p)
-        w.StartWrite <| sprintf "%s %s" (paramListTypeString ctorArgs) (ctorParam.name)
+        w.StartWrite <| sprintf "%s %s" (paramListTypeString ctorArgs inputTypeName) (ctorParam.name)
         if i <> ctorParams.Length - 1 then
           w.Write(",\n")  
       
@@ -176,10 +185,10 @@ let renderMainCtor (klassName:string) (ctorParams:HandlerCtorParam list) (w:Clas
         for ctorParam in ctorParams do
             w.StartWriteLine <| (sprintf "this.%s = %s;" (ctorParam.name) (ctorParam.name))))
 
-let renderHandlerCtorParamsIvars (ctorParams:HandlerCtorParam list) (w:ClassWriter) =
+let renderHandlerCtorParamsIvars (ctorParams:HandlerCtorParam list) (inputTypeName:string option) (w:ClassWriter) =
   for ctorParam in ctorParams do
     let pms = ctorParam.handlerArgs |> List.map (function | FunctionParam(p) -> p)
-    w.StartWriteLine <| (sprintf "public readonly %s %s;" (paramListTypeString pms) (ctorParam.name))
+    w.StartWriteLine <| (sprintf "public readonly %s %s;" (paramListTypeString pms inputTypeName) (ctorParam.name))
 
 type RouteNode = 
   { endPoints: Endpoint list
@@ -295,7 +304,7 @@ let rec route2If (route: RouteTreeFragment) (idx:int) : RouteIfTest =
       // Don't need to worry about children here, because it isn't possible with the way we group routes
       { partIdx = None; seg = endpoint; children = [] }
 
-let renderIf (routeIf:RouteIfTest) (w:ClassWriter) = 
+let renderIf (routeIf:RouteIfTest) (inputTypeName:string option) (w:ClassWriter) = 
   let rec renderIfAux (routeIf:RouteIfTest) (precedingSegs:NamedRouteSegment list) (first:bool) (depth:int) =
     let keyword = if first then "if" else "else if"    
     match routeIf.seg with
@@ -315,27 +324,43 @@ let renderIf (routeIf:RouteIfTest) (w:ClassWriter) =
             renderIfAux child (seg :: precedingSegs) (i = 0) (depth + 1)))
       if depth = 0 then w.StartWriteLine("break;")
     | Endpoint(endpoint) ->
-      let args = 
+      let dynArgs = 
         precedingSegs 
         |> List.rev 
         |> List.choose (function
           | NumericID(n) -> Some(n) 
           | _ -> None)
-        |> String.concat ", "
-      w.StartWriteLine <| sprintf "%s (verb == \"%s\") { this.%s(%s); return; }" keyword (endpoint.verb) (endpoint.handlerName) args
+
+      let args = 
+        match inputTypeName with
+        | Some(_) -> "context" :: dynArgs
+        | None -> dynArgs
+      
+      w.StartWriteLine <| sprintf "%s (verb == \"%s\") { this.%s(%s); return; }" keyword (endpoint.verb) (endpoint.handlerName) (args |> String.concat ", ")
 
   renderIfAux routeIf [] true 0
 
-let renderRouteGroupMatchTest (group:RouteTreeFragment list) (w:ClassWriter) =
+let renderRouteGroupMatchTest (group:RouteTreeFragment list) (inputTypeName:string option) (w:ClassWriter) =
   for route in group do
     let IF = route2If route 0
-    renderIf IF w
+    renderIf IF inputTypeName w
 
-let renderDispatchMethod (routeTree:RouteNode) (w:ClassWriter) =
+let renderDispatchMethod (routeTree:RouteNode) (inputTypeName:string option) (w:ClassWriter) =
   let routeGroups = routeTree |> flattenRouteTree |> groupRoutes
-  System.Diagnostics.Debug.Print <| sprintf "routeGroups:\n\n%A" routeGroups
-  w.StartWrite("public void DispatchRoute(string verb, string path) ")
 
+  let baseArgs = [
+    "string verb"
+    "string path"  
+  ]
+
+  let args = 
+    match inputTypeName with
+    | Some(inputTypeName) ->
+      sprintf "%s context" inputTypeName :: baseArgs
+    | None -> baseArgs
+
+  let argsStr = args |> String.concat ", "
+  w.StartWrite<| sprintf "public void DispatchRoute(%s) " argsStr
   using (w.block()) (fun _ ->
     w.StartWriteLine <| "var parts = path.Split('/');"
     // Normalize starting and ending flash
@@ -347,7 +372,7 @@ let renderDispatchMethod (routeTree:RouteNode) (w:ClassWriter) =
       for n, group in routeGroups do
         w.StartWriteLine <| sprintf "case %d:" n
         using (w.indent()) (fun _ ->
-          renderRouteGroupMatchTest group w)
+          renderRouteGroupMatchTest group inputTypeName w)
       w.StartWriteLine <| "default: break;")
     w.StartWriteLine <| "throw new RouteNotMatchedException(verb, path);")
 
@@ -390,19 +415,19 @@ let renderMainClass (klass:RouterKlass) (routeTree:RouteNode) =
       )
       match klass.ctor with
       | Some(ctorParams) ->
-        renderMainCtor (klass.name) ctorParams w
-        renderHandlerCtorParamsIvars ctorParams w
+        renderMainCtor (klass.name) ctorParams (klass.inputTypeName) w
+        renderHandlerCtorParamsIvars ctorParams (klass.inputTypeName) w
       | None -> failwith "Missing ctor"
       System.Diagnostics.Debug.Print <| sprintf "RouteTree:\n\n%A" routeTree
       w.Write("\n")
-      renderDispatchMethod routeTree w
+      renderDispatchMethod routeTree (klass.inputTypeName) w
       renderUtilities w))
   w.content.ToString()
 
 let compileRoutes (options:RouteProviderOptions) =
   match runParserOnString RouteParsing.pRoutes () "User routes" (options.routesStr) with
   | Success(routes,_, _) ->
-    let klass = routes2Class routes (options.typeName)
+    let klass = routes2Class routes options
     let routeTree = buildRouteTree routes
     let code = renderMainClass klass routeTree
     let dllFile = System.IO.Path.GetTempFileName()
