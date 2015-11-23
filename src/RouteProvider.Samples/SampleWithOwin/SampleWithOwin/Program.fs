@@ -5,16 +5,17 @@ open Microsoft.Owin
 open System.Threading.Tasks
 open Microsoft.Owin.Hosting
 open Microsoft.Owin.Host.HttpListener
+type A = Owin.IAppBuilder list
 
 [<Literal>]
 let routes = """
   GET projects/{projectId}/comments/{commentId} as getProjectComments
-  PUT projects/{projectId} as updateProject
+  PUT projects/{projectId} as updateProject  
 """
 
-type Routes = IsakSky.RouteProvider<routes, "Microsoft.Owin.IOwinContext">
+type Routes = IsakSky.RouteProvider<routes, "Owin.IAppBuilder">
 
-let router = Routes(getProjectCommentsHandler = (fun ctx projectId CommentId -> ()),
+let router = Routes(getProjectCommentsHandler = (fun ctx projectId commentId -> ()),
                     updateProjectHandler = (fun ctx projectId -> ()))
 
 type WebApp() =

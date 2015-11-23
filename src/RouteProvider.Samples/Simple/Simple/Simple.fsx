@@ -8,7 +8,7 @@ let routes = """
   GET projects/statistics
 """
 
-type MyRoutes = IsakSky.RouteProvider<routes, "string">
+type MyRoutes = IsakSky.RouteProvider<routes, "Owin.IAppBuilder">
 
 let router = MyRoutes(
               getProjectHandler = (fun ctx projectId -> printfn "You asked for project %d" projectId),
@@ -21,5 +21,5 @@ let router = MyRoutes(
 
 MyRoutes.Builders.getProject(1L)
 MyRoutes.Builders.getProjectComments(1L, 123L)
-router.DispatchRoute("ctx", "GET", "/projects/123")
-router.DispatchRoute("ctx", "GET", "/projects/123/comments/4/")
+//router.DispatchRoute("ctx", "GET", "/projects/123")
+//router.DispatchRoute("ctx", "GET", "/projects/123/comments/4/")

@@ -1,0 +1,5 @@
+source https://nuget.org/api/v2
+nuget Microsoft.Owin.Host.HttpListener
+nuget Microsoft.Owin.Host.SystemWeb
+nuget Microsoft.Owin.Hosting
+nuget Owin

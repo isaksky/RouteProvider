@@ -2,13 +2,12 @@ source https://nuget.org/api/v2
 
 nuget FParsec
 nuget FSharp.Formatting
-nuget Microsoft.Owin.Host.HttpListener
-nuget Microsoft.Owin.Host.SystemWeb
-nuget Microsoft.Owin.Hosting
-nuget NUnit 
-nuget NUnit.Runners
 nuget FAKE
-nuget Owin
 nuget SourceLink.Fake
+
+group Test
+  source https://nuget.org/api/v2
+  nuget NUnit 
+  nuget NUnit.Runners
 
 github fsharp/FAKE modules/Octokit/Octokit.fsx

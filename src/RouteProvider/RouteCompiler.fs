@@ -2,11 +2,15 @@
 open FParsec
 open Route
 open System.Text
+open Microsoft.FSharp.Core.CompilerServices
+
+
 
 type RouteProviderOptions =
    { typeName: string
      routesStr: string
-     inputTypeName: string option }
+     inputTypeName: string option
+     config: TypeProviderConfig }
 
 type RouterKlass = 
   { name: string
@@ -406,13 +410,13 @@ let renderMainClass (klass:RouterKlass) (routeTree:RouteNode) =
   let w = new ClassWriter()
   w.StartWriteLine "using System;"
   w.StartWrite "namespace IsakSky "
-  using (w.block()) (fun _ ->
+  using (w.block()) <| fun _ ->
     w.StartWrite <| sprintf "public class %s " (klass.name)
-    using (w.block()) (fun _ ->
+    using (w.block()) <| fun _ ->
       w.StartWrite "public static class Builders"
-      using (w.block()) (fun _ -> 
+      using (w.block()) <| fun _ -> 
         for k in klass.routeKlasses do renderRouteBuilder k w 
-      )
+      
       match klass.ctor with
       | Some(ctorParams) ->
         renderMainCtor (klass.name) ctorParams (klass.inputTypeName) w
@@ -421,7 +425,7 @@ let renderMainClass (klass:RouterKlass) (routeTree:RouteNode) =
       System.Diagnostics.Debug.Print <| sprintf "RouteTree:\n\n%A" routeTree
       w.Write("\n")
       renderDispatchMethod routeTree (klass.inputTypeName) w
-      renderUtilities w))
+      renderUtilities w
   w.content.ToString()
 
 let compileRoutes (options:RouteProviderOptions) =
@@ -431,12 +435,40 @@ let compileRoutes (options:RouteProviderOptions) =
     let routeTree = buildRouteTree routes
     let code = renderMainClass klass routeTree
     let dllFile = System.IO.Path.GetTempFileName()
+    let compilerArgs =  dict [("CompilerVersion", "v4.0")]
+    //let compiler = new Microsoft.CSharp.CSharpCodeProvider(compilerArgs)
     let compiler = new Microsoft.CSharp.CSharpCodeProvider()
     let parameters = new System.CodeDom.Compiler.CompilerParameters()
+    parameters.TreatWarningsAsErrors <- true
+    let mutable foundOwin = false
+
+    System.Diagnostics.Debug.Print <| sprintf "ReferencedAssemblies %A" options.config.ReferencedAssemblies
+    for r in options.config.ReferencedAssemblies do
+      if (r.EndsWith(@"\Owin.dll")) then
+        let cp = System.IO.Path.GetTempFileName()
+        System.IO.File.Delete(cp)
+        System.IO.File.Copy(r, cp)
+        foundOwin <- true
+        System.Diagnostics.Debug.Print <| sprintf "Adding %s" r
+        parameters.ReferencedAssemblies.Add(cp) |> ignore
+    parameters.ReferencedAssemblies.Add("mscorlib.dll") |> ignore
+
+    if not foundOwin then 
+      failwith "Couldn't find owin"
+
+    //parameters.ReferencedAssemblies.Add "System.dll" |> ignore
+    //parameters.ReferencedAssemblies.Add @"Owin.dll" |> ignore
+    //parameters.ReferencedAssemblies.Add @"C:\Users\isak\dev\RouteProvider\packages\Microsoft.Owin\lib\net45\Microsoft.Owin.dll" |> ignore
+    //parameters.ReferencedAssemblies.Add @"C:\Users\isak\AppData\Local\assembly\dl3\M5879WN5.4MO\0LMT2A79.2E2\7d54a98a\00e3eaf3_c947d001\Microsoft.Owin.dll" |> ignore
     parameters.OutputAssembly <- dllFile
     parameters.CompilerOptions <- "/t:library"
     let compilerResults = compiler.CompileAssemblyFromSource(parameters, [| code |])
-    let asm = compilerResults.CompiledAssembly
-    asm.GetType <| "IsakSky." + options.typeName
+    if compilerResults.Errors.HasErrors then
+      let errors = seq { for err in compilerResults.Errors do yield err }
+      failwithf "Got error: %A" (errors |> Seq.head)
+    else
+      let asm = System.Reflection.Assembly.LoadFrom(dllFile)
+      //let asm = compilerResults.CompiledAssembly
+      asm.GetType <| "IsakSky." + options.typeName
   | Failure (msg,_,_) ->
     failwithf "Failed to parse routes. Error: %s" msg

@@ -1,0 +1,13 @@
+NUGET
+  remote: https://nuget.org/api/v2
+  specs:
+    Microsoft.Owin (3.0.1)
+      Owin (>= 1.0)
+    Microsoft.Owin.Host.HttpListener (3.0.1)
+    Microsoft.Owin.Host.SystemWeb (3.0.1)
+      Microsoft.Owin (>= 3.0.1)
+      Owin (>= 1.0)
+    Microsoft.Owin.Hosting (3.0.1)
+      Microsoft.Owin (>= 3.0.1)
+      Owin (>= 1.0)
+    Owin (1.0.0)
