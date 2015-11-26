@@ -51,7 +51,10 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
       member this.GetNamespaces() =
           [| this |]
       member this.GetStaticParameters(typeWithoutArguments) =
-        staticParams
+        if typeWithoutArguments = typeof<RouteProvider> then
+          staticParams
+        else 
+          [| |]
       member this.ApplyStaticArguments(typeWithoutArguments, typeNameWithArguments, staticArguments) =
         let typeName = typeNameWithArguments.[typeNameWithArguments.Length - 1]
 
