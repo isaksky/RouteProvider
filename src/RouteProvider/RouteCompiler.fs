@@ -4,8 +4,6 @@ open Route
 open System.Text
 open Microsoft.FSharp.Core.CompilerServices
 
-
-
 type RouteProviderOptions =
    { typeName: string
      routesStr: string
@@ -18,8 +16,6 @@ type RouterKlass =
     routeKlasses: RouteBuilder list
     methods: Method list
     inputTypeName: string option }
-//  static member Empty () =
-    //{ name = ""; ctor = None; routeKlasses = []; methods = [] }
 and RouteBuilder = 
   { name: string
     arguments: FunctionParam list
@@ -434,32 +430,18 @@ let compileRoutes (options:RouteProviderOptions) =
     let klass = routes2Class routes options
     let routeTree = buildRouteTree routes
     let code = renderMainClass klass routeTree
+    
     let dllFile = System.IO.Path.GetTempFileName()
     let compilerArgs =  dict [("CompilerVersion", "v4.0")]
-    //let compiler = new Microsoft.CSharp.CSharpCodeProvider(compilerArgs)
-    let compiler = new Microsoft.CSharp.CSharpCodeProvider()
+    let compiler = new Microsoft.CSharp.CSharpCodeProvider(compilerArgs)
+    
     let parameters = new System.CodeDom.Compiler.CompilerParameters()
     parameters.TreatWarningsAsErrors <- true
-    let mutable foundOwin = false
 
     System.Diagnostics.Debug.Print <| sprintf "ReferencedAssemblies %A" options.config.ReferencedAssemblies
     for r in options.config.ReferencedAssemblies do
-      if (r.EndsWith(@"\Owin.dll")) then
-        let cp = System.IO.Path.GetTempFileName()
-        System.IO.File.Delete(cp)
-        System.IO.File.Copy(r, cp)
-        foundOwin <- true
-        System.Diagnostics.Debug.Print <| sprintf "Adding %s" r
-        parameters.ReferencedAssemblies.Add(cp) |> ignore
-    parameters.ReferencedAssemblies.Add("mscorlib.dll") |> ignore
+      parameters.ReferencedAssemblies.Add(r) |> ignore
 
-    if not foundOwin then 
-      failwith "Couldn't find owin"
-
-    //parameters.ReferencedAssemblies.Add "System.dll" |> ignore
-    //parameters.ReferencedAssemblies.Add @"Owin.dll" |> ignore
-    //parameters.ReferencedAssemblies.Add @"C:\Users\isak\dev\RouteProvider\packages\Microsoft.Owin\lib\net45\Microsoft.Owin.dll" |> ignore
-    //parameters.ReferencedAssemblies.Add @"C:\Users\isak\AppData\Local\assembly\dl3\M5879WN5.4MO\0LMT2A79.2E2\7d54a98a\00e3eaf3_c947d001\Microsoft.Owin.dll" |> ignore
     parameters.OutputAssembly <- dllFile
     parameters.CompilerOptions <- "/t:library"
     let compilerResults = compiler.CompileAssemblyFromSource(parameters, [| code |])
@@ -468,7 +450,6 @@ let compileRoutes (options:RouteProviderOptions) =
       failwithf "Got error: %A" (errors |> Seq.head)
     else
       let asm = System.Reflection.Assembly.LoadFrom(dllFile)
-      //let asm = compilerResults.CompiledAssembly
       asm.GetType <| "IsakSky." + options.typeName
   | Failure (msg,_,_) ->
     failwithf "Failed to parse routes. Error: %s" msg

@@ -5,26 +5,28 @@ open Microsoft.Owin
 open System.Threading.Tasks
 open Microsoft.Owin.Hosting
 open Microsoft.Owin.Host.HttpListener
-type A = Owin.IAppBuilder list
 
 [<Literal>]
 let routes = """
   GET projects/{projectId}/comments/{commentId} as getProjectComments
-  PUT projects/{projectId} as updateProject  
+  GET projects/{projectId} as getProject  
 """
 
-type Routes = IsakSky.RouteProvider<routes, "Owin.IAppBuilder">
+type Routes = IsakSky.RouteProvider<routes, "Microsoft.Owin.IOwinContext">
 
-let router = Routes(getProjectCommentsHandler = (fun ctx projectId commentId -> ()),
-                    updateProjectHandler = (fun ctx projectId -> ()))
+let router = Routes(getProjectCommentsHandler = (fun ctx projectId commentId -> (
+                                                  ctx.Response.Write(sprintf "You asked for project %d and comment %d" projectId commentId)
+                                                )),
+                    getProjectHandler = (fun ctx projectId -> 
+                                          ctx.Response.Write("You asked for a project")))
 
 type WebApp() =
   let handleOwinContext (ctx:IOwinContext) =
-    use writer = new StreamWriter(ctx.Response.Body)
-    match ctx.Request.Path.Value with
-    | "/Hello" ->
-      ctx.Response.Write "cool"
-    | _ -> ctx.Response.Write "Something"
+    try 
+      router.DispatchRoute(ctx, ctx.Request.Method, ctx.Request.Path.ToString())
+    with 
+    | :? System.Exception as ex ->
+      printfn "Got exception %A" ex
  
   let owinHandler = fun (context:IOwinContext) (_:Func<Task>) -> 
     handleOwinContext context;

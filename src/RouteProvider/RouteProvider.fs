@@ -13,6 +13,18 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
   let cfg = cfg
   let namespaceName = "IsakSky"
   let invalidation = new Event<_,_>()
+  let mutable _assemblyResolver : ResolveEventHandler = null
+
+  do
+    _assemblyResolver <- ResolveEventHandler(fun _ args ->
+          let expectedName = (AssemblyName(args.Name)).Name + ".dll"
+          let asmPath = 
+              cfg.ReferencedAssemblies
+              |> Seq.tryFind (fun asmPath -> IO.Path.GetFileName(asmPath) = expectedName)
+          match asmPath with
+          | Some f -> Assembly.LoadFrom f
+          | None -> null)
+    System.AppDomain.CurrentDomain.add_AssemblyResolve(_assemblyResolver)
 
   let staticParams = [|
     { new ParameterInfo() with
@@ -30,16 +42,15 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
         override this.DefaultValue with get() = "" :> obj
     }
   |]  
-    
+  //member this.ResolveAssembly(args) =
+
   interface ITypeProvider with
       [<CLIEvent>]
       member this.Invalidate =
           invalidation.Publish
       member this.GetNamespaces() =
-          let callingAsm = System.Reflection.Assembly.GetCallingAssembly()
           [| this |]
       member this.GetStaticParameters(typeWithoutArguments) =
-        System.Diagnostics.Debug.Print <| sprintf  "this.GetStaticParameters :: %A" typeWithoutArguments
         staticParams
       member this.ApplyStaticArguments(typeWithoutArguments, typeNameWithArguments, staticArguments) =
         let typeName = typeNameWithArguments.[typeNameWithArguments.Length - 1]
@@ -53,7 +64,6 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
               RouteCompiler.RouteProviderOptions.config = cfg}
           | _ ->
             failwithf "Bad params: %A" staticArguments
-
         RouteCompiler.compileRoutes compilerArgs
       member this.GetInvokerExpression(syntheticMethodBase, parameters) =
           match syntheticMethodBase with
@@ -69,7 +79,7 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
       member this.GetGeneratedAssemblyContents(assembly) =
           IO.File.ReadAllBytes assembly.ManifestModule.FullyQualifiedName
       member this.Dispose() =
-          ()
+        System.AppDomain.CurrentDomain.remove_AssemblyResolve(_assemblyResolver)
 
   interface IProvidedNamespace with
       member this.ResolveTypeName(typeName) =
@@ -84,3 +94,4 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
 
 [<assembly: TypeProviderAssembly>]
 do ()
+
