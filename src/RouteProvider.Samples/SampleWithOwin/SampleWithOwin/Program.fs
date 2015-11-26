@@ -14,19 +14,18 @@ let routes = """
 
 type Routes = IsakSky.RouteProvider<routes, "Microsoft.Owin.IOwinContext">
 
-let router = Routes(getProjectCommentsHandler = (fun ctx projectId commentId -> (
-                                                  ctx.Response.Write(sprintf "You asked for project %d and comment %d" projectId commentId)
-                                                )),
+let router = Routes(getProjectCommentsHandler = (fun ctx projectId commentId -> 
+                                                  ctx.Response.Write(sprintf "You asked for project %d and comment %d" projectId commentId)),
                     getProjectHandler = (fun ctx projectId -> 
-                                          ctx.Response.Write("You asked for a project")))
+                                          ctx.Response.Write(sprintf "You asked for project %d" projectId)))
 
 type WebApp() =
   let handleOwinContext (ctx:IOwinContext) =
     try 
       router.DispatchRoute(ctx, ctx.Request.Method, ctx.Request.Path.ToString())
     with 
-    | :? System.Exception as ex ->
-      printfn "Got exception %A" ex
+    | :? Routes.RouteNotMatchedException as ex ->
+      printfn "Route %s %s not matched" ex.Verb ex.Path
  
   let owinHandler = fun (context:IOwinContext) (_:Func<Task>) -> 
     handleOwinContext context;
