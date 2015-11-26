@@ -34,9 +34,14 @@ You can also build paths in a typed way like this:
 
     let url = MyRoutes.Builders.getProjectComments(123L,4L)
     -> "/projects/123/comments/4"
+    
+To integrate with the web library you are using, you can pass in a fully qualified type name as the second argument:
+
+    type Routes = IsakSky.RouteProvider<routes, "Microsoft.Owin.IOwinContext">
+    
+The generated dispatch and handler functions will then take that type as the first argument.
 
 ## Todo
-- Option for user type that will passed to handler functions (e.g., OwinContext)
 - Option for user type that handler functions must return (e.g., HttpWebResponse)
 - Support other types of path segments than just ```int64```
 - Allow routes to be defined in a seperate file
