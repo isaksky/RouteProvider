@@ -1,15 +1,10 @@
 ﻿module Route
 
-type PathSegment (name:string) = 
-  member x.name = name
-type ConstantSeg (name:string) =
-  inherit PathSegment(name)
-type Int64Seg (name:string) =
-  inherit PathSegment(name)
-
 type NamedRouteSegment = 
- | Constant of string
- | NumericID of string
+ | ConstantSeg of string
+ | Int64Seg of string
+ | StringSeg of string
+ | IntSeg of string
 
 type Route =
    { routeSegments: NamedRouteSegment list

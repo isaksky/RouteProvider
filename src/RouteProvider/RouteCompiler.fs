@@ -3,6 +3,8 @@ open FParsec
 open Route
 open System.Text
 open Microsoft.FSharp.Core.CompilerServices
+open Microsoft.FSharp.Collections
+open System.Collections.Generic
 
 type RouteProviderOptions =
    { typeName: string
@@ -22,6 +24,8 @@ and RouteBuilder =
     segments: NamedRouteSegment list }
 and DynamicParam = 
   | Int64Param of string
+  | IntParam of string
+  | StringParam of string
 and FunctionParam = | FunctionParam of DynamicParam
 and HandlerCtorParam =
   { name: string
@@ -36,15 +40,17 @@ let routeName (route:Route) =
     routeName
   | None ->
     let routeParts = route.routeSegments |> List.choose  (function 
-      | Constant(name) -> Some(name)
-      | NumericID(_) -> None) 
+      | ConstantSeg(name) -> Some(name)
+      | _ -> None) 
     sprintf "%s__%s" (route.verb) (String.concat "_" routeParts)
 
 let routeIVars (route:Route) =
   List.choose
     (function
-      | Constant(_) -> None
-      | NumericID(name) -> Some(FunctionParam(Int64Param(name)))) 
+      | ConstantSeg(_) -> None
+      | Int64Seg(name) -> Some(FunctionParam(Int64Param(name)))
+      | IntSeg(name) -> Some(FunctionParam(IntParam(name)))
+      | StringSeg(name) -> Some(FunctionParam(StringParam(name))))
     (route.routeSegments)
 
 let routeSubClass (route:Route) =
@@ -62,8 +68,9 @@ let makeHandlerCtorParam (route:Route) =
   { name = (handlerName route)
     handlerArgs = (List.choose
                     (function
-                      | NumericID(name) -> 
-                        Some(FunctionParam(Int64Param(name)))
+                      | Int64Seg(name) -> Some(FunctionParam(Int64Param(name)))
+                      | IntSeg(name) -> Some(FunctionParam(IntParam(name)))
+                      | StringSeg(name) -> Some(FunctionParam(StringParam(name)))
                       | _ -> None)
                     (route.routeSegments)) }
 
@@ -109,21 +116,24 @@ let renderRouteBuilder (klass:RouteBuilder) (w:ClassWriter) =
   let argStrs =
     klass.arguments
     |> List.map (function
-      | FunctionParam(Int64Param(name)) ->
-        sprintf "long %s" name)
+      | FunctionParam(Int64Param(name)) -> sprintf "long %s" name
+      | FunctionParam(IntParam(name)) -> sprintf "int %s" name
+      | FunctionParam(StringParam(name)) -> sprintf "string %s" name)
 
   w.Write <| String.concat ", " argStrs
   w.Write ")"
 
   using (w.block()) (fun _ ->
-    let hasDynSeg = klass.segments |> List.tryFind (function | NumericID(_) -> true | _ -> false) |> Option.isSome
+    let hasDynSeg = klass.segments |> List.tryFind (function | ConstantSeg(_) -> false | _ -> true) |> Option.isSome
     if hasDynSeg then
       let rec buildFmtStr segs dynIdx ret =
         match segs with
         | [] -> ret
-        | Constant(name)::segs ->
+        | ConstantSeg(name)::segs ->
           buildFmtStr segs dynIdx (name::ret)
-        | NumericID(_)::segs ->
+        | Int64Seg(_)::segs 
+        | IntSeg(_)::segs 
+        | StringSeg(_)::segs ->
           let s = sprintf "{%d}" dynIdx
           buildFmtStr segs (dynIdx + 1) (s::ret)
             
@@ -137,8 +147,10 @@ let renderRouteBuilder (klass:RouteBuilder) (w:ClassWriter) =
         klass.segments 
           |> List.choose (fun seg ->
             match seg with
-            | Constant(_) -> None
-            | NumericID(name) -> Some(name))
+            | ConstantSeg(_) -> None
+            | Int64Seg(name) 
+            | IntSeg(name) 
+            | StringSeg(name) -> Some(name))
           |> String.concat ", "
 
       w.StartWriteLine <| sprintf "return string.Format(\"%s\", %s);" fmtStr argsStr
@@ -147,15 +159,19 @@ let renderRouteBuilder (klass:RouteBuilder) (w:ClassWriter) =
           klass.segments 
           |> List.map (fun seg ->
             match seg with
-            | Constant(name) -> name
+            | ConstantSeg(name) -> name
             | _ -> failwith "Logic error")
           |> String.concat "/"
       w.StartWriteLine <| sprintf "return \"/%s\";" constStr)
 
+let dynParamTypeName (dynParam:DynamicParam) =
+  match dynParam with
+  | Int64Param(_) -> "long"
+  | IntParam(_) -> "int"
+  | StringParam(_) -> "string"
+
 let paramListTypeString (paramList: DynamicParam list) (inputTypeName:string option) =
-  let genericTypes = 
-    paramList
-    |> List.map (function | Int64Param(_) -> "long")
+  let genericTypes = paramList |> List.map dynParamTypeName
 
   let types = 
     match inputTypeName with
@@ -249,16 +265,78 @@ type FlatRouteMember =
   | NamedRouteSegment of NamedRouteSegment
   | Endpoint of Endpoint
 
+type Mappings = 
+  { int64s: (NamedRouteSegment * RouteNode) list
+    ints: (NamedRouteSegment * RouteNode) list 
+    strs: (NamedRouteSegment * RouteNode) list }
+  static member Empty () =
+    { int64s = []; ints = []; strs = [] }
+
+let addSeg mappings pair = 
+  let seg, _ = pair
+  match seg with
+  | Int64Seg(_) ->
+    { mappings with int64s = pair :: mappings.int64s}
+  | IntSeg(_) -> 
+    { mappings with ints = pair :: mappings.ints}
+  | StringSeg(_) ->
+    { mappings with strs = pair :: mappings.strs}
+  | _ -> failwith "Logic error"
+
+let addMapping (m:Map<string, Mappings>) (k:string) (pair:NamedRouteSegment * RouteNode) : Map<string, Mappings> = 
+  match Map.tryFind k m with
+  | Some(mappings) ->
+      Map.add k (addSeg mappings pair) m
+  | None -> 
+    let mappings = Mappings.Empty()
+    Map.add k (addSeg mappings pair) m
+
 let flattenRouteTree (routeTree:RouteNode) : FlatRouteMember list seq =
-  let rec walkAux (routeTree:RouteNode) =
+  let rec walkAux (routeTree:RouteNode) depth =
     seq {
       for e in routeTree.endPoints do
         yield [Endpoint(e)]
 
-      for seg, child in routeTree.children do
-        yield! (walkAux child) |> Seq.map (fun n -> NamedRouteSegment(seg) :: n)
+      let rec group (children:(NamedRouteSegment * RouteNode) list) constants mappings =
+        match children with
+        | (seg, _) as c :: children -> 
+          let constants, mappings = 
+            match seg with
+            | ConstantSeg(_) ->
+              c :: constants, mappings
+            | Int64Seg(name) | IntSeg(name) | StringSeg(name) ->
+              let mappings = addMapping mappings name c
+              constants, mappings
+          group children constants mappings
+        | [] -> 
+          constants, mappings
+
+      let constants, mappingsMap = group (routeTree.children) [] Map.empty
+
+      for seg, child in constants do
+        yield! (walkAux child (depth + 1)) |> Seq.map (fun n -> NamedRouteSegment(seg) :: n)
+
+      for KeyValue(_, mappings) in mappingsMap do
+        let nodes = 
+          [mappings.int64s; mappings.ints; mappings.strs] 
+          |> List.map List.rev 
+          |> List.concat 
+          |> Array.ofList
+        for idx in [0..nodes.Length - 1] do
+          let seg, child = nodes.[idx]
+          let seg =
+            match mappingsMap.Count with
+            | 1 -> seg
+            | _ ->
+              match seg with
+              | Int64Seg(_) -> Int64Seg(sprintf "int64Arg_%d_%d" depth idx)
+              | IntSeg(_) -> IntSeg(sprintf "intArg%d_%d" depth idx)
+              | StringSeg(_) -> StringSeg(sprintf "strArg_%d_%d" depth idx)
+              | _ -> failwith "Logic error"
+
+          yield! (walkAux child (depth + 1)) |> Seq.map (fun n -> NamedRouteSegment(seg) :: n) 
     }
-  walkAux routeTree 
+  walkAux routeTree 0
 
 type RouteTreeFragment = 
   { head: FlatRouteMember
@@ -279,7 +357,7 @@ let groupRoutes (flatRoutes: FlatRouteMember list seq) : (int * RouteTreeFragmen
             t2)
       | None ->
         let t = { head = seg; children = (addFlatRoute [] segs)}
-        t :: memo
+        memo @ [t]
       
   flatRoutes 
   |> Seq.groupBy (fun s -> Seq.length s - 1)
@@ -311,24 +389,37 @@ let renderIf (routeIf:RouteIfTest) (inputTypeName:string option) (w:ClassWriter)
     | NamedRouteSegment(seg) ->
       let idx = routeIf.partIdx.Value
       match seg with 
-      | Constant(name) ->
+      | ConstantSeg(name) ->
         w.StartWrite <| sprintf "%s (parts[start + %d] == \"%s\")" keyword idx name
         using (w.block()) (fun _ ->
           routeIf.children |> List.iteri (fun i child ->
             renderIfAux child (seg :: precedingSegs) (i = 0) (depth + 1)))
-      | NumericID(name) ->
-        w.StartWrite <| sprintf "%s (StringIsAllDigits(parts[start + %d]))" keyword idx
+      | StringSeg(name) ->
+        if first then w.StartWrite("") else w.StartWrite "else"
         using (w.block()) (fun _ ->
-          w.StartWriteLine <| sprintf "var %s = long.Parse(parts[start + %d]);" name idx
+          w.StartWriteLine <| sprintf "var %s = parts[start + %d];" name idx
           routeIf.children |> List.iteri (fun i child ->
             renderIfAux child (seg :: precedingSegs) (i = 0) (depth + 1)))
-      if depth = 0 then w.StartWriteLine("break;")
+      | Int64Seg(name) 
+      | IntSeg(name) ->
+        let keyword = if first then "if" else "else if"    
+        w.StartWrite <| sprintf "%s (StringIsAllDigits(parts[start + %d]))" keyword idx
+        using (w.block()) (fun _ ->
+          let tname = 
+            match seg with
+            | IntSeg(_) -> "int"
+            | Int64Seg(_) -> "long"
+            | _ -> failwith "Logic error"
+          w.StartWriteLine <| sprintf "var %s = %s.Parse(parts[start + %d]);" name tname idx
+          routeIf.children |> List.iteri (fun i child ->
+            renderIfAux child (seg :: precedingSegs) (i = 0) (depth + 1)))
+      //if depth = 0 then w.StartWriteLine("break;")
     | Endpoint(endpoint) ->
       let dynArgs = 
         precedingSegs 
         |> List.rev 
         |> List.choose (function
-          | NumericID(n) -> Some(n) 
+          | Int64Seg(n) | IntSeg(n) | StringSeg(n) -> Some(n) 
           | _ -> None)
 
       let args = 
@@ -343,6 +434,8 @@ let renderIf (routeIf:RouteIfTest) (inputTypeName:string option) (w:ClassWriter)
 let renderRouteGroupMatchTest (group:RouteTreeFragment list) (inputTypeName:string option) (w:ClassWriter) =
   for route in group do
     let IF = route2If route 0
+    //System.Diagnostics.Debug.Print <| sprintf "IF: %A" IF
+    System.Diagnostics.Debug.Print <| sprintf "GROUP: %A" group
     renderIf IF inputTypeName w
 
 let renderDispatchMethod (routeTree:RouteNode) (inputTypeName:string option) (w:ClassWriter) =
@@ -372,7 +465,8 @@ let renderDispatchMethod (routeTree:RouteNode) (inputTypeName:string option) (w:
       for n, group in routeGroups do
         w.StartWriteLine <| sprintf "case %d:" n
         using (w.indent()) (fun _ ->
-          renderRouteGroupMatchTest group inputTypeName w)
+          renderRouteGroupMatchTest group inputTypeName w
+          w.StartWriteLine "break;")
       w.StartWriteLine <| "default: break;")
     w.StartWriteLine <| "throw new RouteNotMatchedException(verb, path);")
 

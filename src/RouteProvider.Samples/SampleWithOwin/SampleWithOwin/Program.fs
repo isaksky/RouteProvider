@@ -9,7 +9,10 @@ open Microsoft.Owin.Host.HttpListener
 [<Literal>]
 let routes = """
   GET projects/{projectId}/comments/{commentId} as getProjectComments
-  GET projects/{projectId} as getProject  
+  PUT projects/{proj}/comments/{comm}
+  GET projects/{projectId}/foo/bar as getProject
+  GET projects/{a:int}/d
+  GET projects/{b:string}/{c:string}
 """
 
 type Routes = IsakSky.RouteProvider<routes, "Microsoft.Owin.IOwinContext">

@@ -9,8 +9,9 @@ This is an F# Type provider made to generate types suitable for routing in a web
 let routes = """
   GET projects/{projectId} as getProject
   GET projects/{projectId}/comments/{commentId} as getProjectComments
-  PUT projects/{projectId} as updateProject
+  PUT projects/{projectId:int} as updateProject
   GET projects/statistics
+  GET people/{name:string} as getPerson
 """
 
 type MyRoutes = IsakSky.RouteProvider<routes>
@@ -21,9 +22,11 @@ let router = MyRoutes(
                                                                     printfn "You asked for project %d and comment %d" projectId commentId),
               updateProjectHandler = (fun p -> printfn "Updated project %d" p),
               // If you don't provide a route name, one will be computed for you
-              GET__projects_statisticsHandler = (fun () -> printfn "You asked for project statistics")
-             )
+              GET__projects_statisticsHandler = (fun () -> printfn "You asked for project statistics"),
+              getPersonHandler = (fun name -> printfn "You asked for a person called \"%s\"" name))
 ```
+
+You can use ```int64```, ```int```, or ```string``` as type annotations. The default is ```int64```.
 
 Now we can use the router like this:
 
@@ -43,7 +46,6 @@ The generated dispatch and handler functions will then take that type as the fir
 
 ## Todo
 - Option for user type that handler functions must return (e.g., HttpWebResponse)
-- Support other types of path segments than just ```int64```
 - Allow routes to be defined in a seperate file
 
 ## Comparison with other approaches
