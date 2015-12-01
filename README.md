@@ -68,44 +68,40 @@ It generates CSharp types. For example, for the routes defined above, it generat
 using System;
 namespace IsakSky {
   public class MyRoutes {
-    public class getProject {
-      public long projectId;
-      public override string ToString() {
-        return string.Format("/projects/{0}", this.projectId);
+    public static class Builders{
+      public static string getProject(long projectId){
+        return string.Format("/projects/{0}", projectId);
       }
-    }
-    public class getProjectComments {
-      public long projectId;
-      public long commentId;
-      public override string ToString() {
-        return string.Format("/projects/{0}/comments/{1}", this.projectId, this.commentId);
+      public static string getProjectComments(long projectId, long commentId){
+        return string.Format("/projects/{0}/comments/{1}", projectId, commentId);
       }
-    }
-    public class updateProject {
-      public long projectId;
-      public override string ToString() {
-        return string.Format("/projects/{0}", this.projectId);
+      public static string updateProject(int projectId){
+        return string.Format("/projects/{0}", projectId);
       }
-    }
-    public class GET__projects_statistics {
-      public override string ToString() {
+      public static string GET__projects_statistics(){
         return "/projects/statistics";
+      }
+      public static string getPerson(string name){
+        return string.Format("/people/{0}", name);
       }
     }
     public MyRoutes(
       Action<long> getProjectHandler,
       Action<long, long> getProjectCommentsHandler,
-      Action<long> updateProjectHandler,
-      Action GET__projects_statisticsHandler) {
+      Action<int> updateProjectHandler,
+      Action GET__projects_statisticsHandler,
+      Action<string> getPersonHandler) {
         this.getProjectHandler = getProjectHandler;
         this.getProjectCommentsHandler = getProjectCommentsHandler;
         this.updateProjectHandler = updateProjectHandler;
         this.GET__projects_statisticsHandler = GET__projects_statisticsHandler;
+        this.getPersonHandler = getPersonHandler;
       }
     public readonly Action<long> getProjectHandler;
     public readonly Action<long, long> getProjectCommentsHandler;
-    public readonly Action<long> updateProjectHandler;
+    public readonly Action<int> updateProjectHandler;
     public readonly Action GET__projects_statisticsHandler;
+    public readonly Action<string> getPersonHandler;
 
     public void DispatchRoute(string verb, string path) {
       var parts = path.Split('/');
@@ -114,14 +110,23 @@ namespace IsakSky {
       var endOffset = parts.Length > 0 && parts[parts.Length - 1] == "" ? 1 : 0;
       switch (parts.Length - start - endOffset) {
         case 2:
+          if (parts[start + 0] == "people"){
+            {
+              var name = parts[start + 1];
+              if (verb == "GET") { this.getPersonHandler(name); return; }
+            }
+          }
           if (parts[start + 0] == "projects"){
             if (parts[start + 1] == "statistics"){
               if (verb == "GET") { this.GET__projects_statisticsHandler(); return; }
             }
             else if (StringIsAllDigits(parts[start + 1])){
               var projectId = long.Parse(parts[start + 1]);
+              if (verb == "GET") { this.getProjectHandler(projectId); return; }
+            }
+            else if (StringIsAllDigits(parts[start + 1])){
+              var projectId = int.Parse(parts[start + 1]);
               if (verb == "PUT") { this.updateProjectHandler(projectId); return; }
-              else if (verb == "GET") { this.getProjectHandler(projectId); return; }
             }
           }
           break;
