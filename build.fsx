@@ -42,7 +42,6 @@ let authors = [ "Isak Sky" ]
 
 // Tags for your project (for NuGet package)
 let tags = "routes REST"
-
 // File system information 
 let solutionFile  = "RouteProvider.sln"
 
@@ -106,7 +105,7 @@ Target "AssemblyInfo" (fun _ ->
 // But keeps a subdirectory structure for each project in the 
 // src folder to support multiple project outputs
 Target "CopyBinaries" (fun _ ->
-    !! "src/**/*.??proj"
+    !! "src/RouteProvider/*.??proj" ++ "tests/**/*.??proj"
     |>  Seq.map (fun f -> ((System.IO.Path.GetDirectoryName f) @@ "bin/Release", "bin" @@ (System.IO.Path.GetFileNameWithoutExtension f)))
     |>  Seq.iter (fun (fromDir, toDir) -> CopyDir toDir fromDir (fun _ -> true))
 )
@@ -126,7 +125,7 @@ Target "CleanDocs" (fun _ ->
 // Build library & test project
 
 Target "Build" (fun _ ->
-    !! solutionFile
+    !! solutionFile 
     |> MSBuildRelease "" "Rebuild"
     |> ignore
 )
@@ -135,12 +134,13 @@ Target "Build" (fun _ ->
 // Run the unit tests using test runner
 
 Target "RunTests" (fun _ ->
-    !! testAssemblies
-    |> NUnit (fun p ->
-        { p with
-            DisableShadowCopy = true
-            TimeOut = TimeSpan.FromMinutes 20.
-            OutputFile = "TestResults.xml" })
+    ()
+    //!! testAssemblies
+    // |> NUnit (fun p ->
+    //     { p with
+    //         DisableShadowCopy = true
+    //         TimeOut = TimeSpan.FromMinutes 20.
+    //         OutputFile = "TestResults.xml" })
 )
 
 #if MONO

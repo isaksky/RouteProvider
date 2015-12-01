@@ -3,11 +3,7 @@ source https://nuget.org/api/v2
 nuget FParsec
 nuget FSharp.Formatting
 nuget FAKE
+nuget nunit 3.0.0
+nuget nunit.runners 3.0.0
 nuget SourceLink.Fake
-
-group Test
-  source https://nuget.org/api/v2
-  nuget NUnit 
-  nuget NUnit.Runners
-
 github fsharp/FAKE modules/Octokit/Octokit.fsx

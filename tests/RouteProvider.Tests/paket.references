@@ -1,3 +1,2 @@
-group Test
-  NUnit
-  NUnit.Runners
+nunit
+nunit.runners
