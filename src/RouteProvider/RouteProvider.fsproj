@@ -79,7 +79,6 @@
   <ItemGroup>
     <None Include="paket.references" />
     <None Include="paket.template" />
-    <Compile Include="TpUtils.fs" />
     <Compile Include="Route.fs" />
     <Compile Include="RouteParsing.fs" />
     <Compile Include="RouteCompiler.fs" />
