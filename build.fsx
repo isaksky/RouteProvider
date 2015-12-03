@@ -45,6 +45,8 @@ let tags = "routes REST"
 // File system information 
 let solutionFile  = "RouteProvider.sln"
 
+let testSolutionFile  = "tests/RouteProvider.Tests/RouteProvider.Tests.sln"
+
 // Pattern specifying assemblies to be tested using NUnit
 let testAssemblies = "tests/**/bin/Release/*Tests*.dll"
 
@@ -125,7 +127,7 @@ Target "CleanDocs" (fun _ ->
 // Build library & test project
 
 Target "Build" (fun _ ->
-    !! solutionFile 
+    !! solutionFile ++ testSolutionFile 
     |> MSBuildRelease "" "Rebuild"
     |> ignore
 )
