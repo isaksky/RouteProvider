@@ -17,13 +17,13 @@ let routes = """
 type MyRoutes = IsakSky.RouteProvider<routes>
 
 let router = MyRoutes(
-              getProjectHandler = (fun projectId -> printfn "You asked for project %d" projectId),
-              getProjectCommentsHandler = (fun projectId commentId ->
+              getProject = (fun projectId -> printfn "You asked for project %d" projectId),
+              getProjectComments = (fun projectId commentId ->
                                                                     printfn "You asked for project %d and comment %d" projectId commentId),
-              updateProjectHandler = (fun p -> printfn "Updated project %d" p),
+              updateProject = (fun p -> printfn "Updated project %d" p),
               // If you don't provide a route name, one will be computed for you
-              GET__projects_statisticsHandler = (fun () -> printfn "You asked for project statistics"),
-              getPersonHandler = (fun name -> printfn "You asked for a person called \"%s\"" name))
+              GET__projects_statistics = (fun () -> printfn "You asked for project statistics"),
+              getPerson = (fun name -> printfn "You asked for a person called \"%s\"" name))
 ```
 
 You can use ```int64```, ```int```, or ```string``` as type annotations. The default is ```int64```.
@@ -86,22 +86,22 @@ namespace IsakSky {
       }
     }
     public MyRoutes(
-      Action<long> getProjectHandler,
-      Action<long, long> getProjectCommentsHandler,
-      Action<int> updateProjectHandler,
-      Action GET__projects_statisticsHandler,
-      Action<string> getPersonHandler) {
-        this.getProjectHandler = getProjectHandler;
-        this.getProjectCommentsHandler = getProjectCommentsHandler;
-        this.updateProjectHandler = updateProjectHandler;
-        this.GET__projects_statisticsHandler = GET__projects_statisticsHandler;
-        this.getPersonHandler = getPersonHandler;
+      Action<long> getProject,
+      Action<long, long> getProjectComments,
+      Action<int> updateProject,
+      Action GET__projects_statistics,
+      Action<string> getPerson) {
+        this.getProject = getProject;
+        this.getProjectComments = getProjectComments;
+        this.updateProject = updateProject;
+        this.GET__projects_statistics = GET__projects_statistics;
+        this.getPerson = getPerson;
       }
-    public readonly Action<long> getProjectHandler;
-    public readonly Action<long, long> getProjectCommentsHandler;
-    public readonly Action<int> updateProjectHandler;
-    public readonly Action GET__projects_statisticsHandler;
-    public readonly Action<string> getPersonHandler;
+    public readonly Action<long> getProject;
+    public readonly Action<long, long> getProjectComments;
+    public readonly Action<int> updateProject;
+    public readonly Action GET__projects_statistics;
+    public readonly Action<string> getPerson;
 
     public void DispatchRoute(string verb, string path) {
       var parts = path.Split('/');
@@ -113,20 +113,20 @@ namespace IsakSky {
           if (parts[start + 0] == "people"){
             {
               var name = parts[start + 1];
-              if (verb == "GET") { this.getPersonHandler(name); return; }
+              if (verb == "GET") { this.getPerson(name); return; }
             }
           }
           if (parts[start + 0] == "projects"){
             if (parts[start + 1] == "statistics"){
-              if (verb == "GET") { this.GET__projects_statisticsHandler(); return; }
+              if (verb == "GET") { this.GET__projects_statistics(); return; }
             }
             else if (StringIsAllDigits(parts[start + 1])){
               var projectId = long.Parse(parts[start + 1]);
-              if (verb == "GET") { this.getProjectHandler(projectId); return; }
+              if (verb == "GET") { this.getProject(projectId); return; }
             }
             else if (StringIsAllDigits(parts[start + 1])){
               var projectId = int.Parse(parts[start + 1]);
-              if (verb == "PUT") { this.updateProjectHandler(projectId); return; }
+              if (verb == "PUT") { this.updateProject(projectId); return; }
             }
           }
           break;
@@ -137,7 +137,7 @@ namespace IsakSky {
               if (parts[start + 2] == "comments"){
                 if (StringIsAllDigits(parts[start + 3])){
                   var commentId = long.Parse(parts[start + 3]);
-                  if (verb == "GET") { this.getProjectCommentsHandler(projectId, commentId); return; }
+                  if (verb == "GET") { this.getProjectComments(projectId, commentId); return; }
                 }
               }
             }

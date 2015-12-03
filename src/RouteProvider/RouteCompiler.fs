@@ -61,8 +61,7 @@ let routeSubClass (route:Route) =
 let makeRouteKlasses (routes:Route list) =
   List.map routeSubClass routes
 
-let handlerName (route:Route) =
-  sprintf "%sHandler" (routeName route)
+let handlerName = routeName 
 
 let makeHandlerCtorParam (route:Route) =
   { name = (handlerName route)

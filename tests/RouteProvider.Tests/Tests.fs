@@ -17,10 +17,10 @@ let ``2part route`` () =
   let routesHit = Array.create 4 false
   let router1 =
     Routes1(
-      GET__projectsHandler = (fun p -> routesHit.[0] <- true),
-      PUT__projects_actionHandler = (fun p -> routesHit.[1] <- true),
-      POST__peopleHandler = (fun () -> routesHit.[2] <- true),
-      POST__people_statusHandler = (fun p s -> routesHit.[3] <- true)  
+      GET__projects = (fun p -> routesHit.[0] <- true),
+      PUT__projects_action = (fun p -> routesHit.[1] <- true),
+      POST__people = (fun () -> routesHit.[2] <- true),
+      POST__people_status = (fun p s -> routesHit.[3] <- true)  
     )
   router1.DispatchRoute("GET", "/projects/1")
   Assert.IsTrue(routesHit.[0])
@@ -33,10 +33,10 @@ let ``3part route`` () =
   let routesHit = Array.create 4 false
   let router1 =
     Routes1(
-      GET__projectsHandler = (fun p -> routesHit.[0] <- true),
-      PUT__projects_actionHandler = (fun p -> routesHit.[1] <- true),
-      POST__peopleHandler = (fun () -> routesHit.[2] <- true),
-      POST__people_statusHandler = (fun p s -> routesHit.[3] <- true)  
+      GET__projects = (fun p -> routesHit.[0] <- true),
+      PUT__projects_action = (fun p -> routesHit.[1] <- true),
+      POST__people = (fun () -> routesHit.[2] <- true),
+      POST__people_status = (fun p s -> routesHit.[3] <- true)  
     )
   router1.DispatchRoute("PUT", "/projects/1/action")
   Assert.IsFalse(routesHit.[0])
@@ -49,10 +49,10 @@ let ``4part route`` () =
   let mutable routeHit = false
   let router1 =
     Routes1(
-      GET__projectsHandler = (fun p -> ()),
-      PUT__projects_actionHandler = (fun p -> ()),
-      POST__peopleHandler = (fun () -> ()),
-      POST__people_statusHandler = (fun p s -> routeHit <- true)  
+      GET__projects = (fun p -> ()),
+      PUT__projects_action = (fun p -> ()),
+      POST__people = (fun () -> ()),
+      POST__people_status = (fun p s -> routeHit <- true)  
     )
   router1.DispatchRoute("POST", "people/123/status/chilling")
   Assert.IsTrue(routeHit)
@@ -70,8 +70,8 @@ let ``const strings prioritized over dyn strings`` () =
   let mutable routeHit = false
   let router =
     Routes2(
-      getProjStatsHandler = (fun () -> routeHit <- true),
-      getProjActionHandler = (fun s -> ())
+      getProjStats = (fun () -> routeHit <- true),
+      getProjAction = (fun s -> ())
     )
   router.DispatchRoute("GET", "projects/statistics")
   Assert.IsTrue(routeHit)
@@ -81,8 +81,8 @@ let ``dyn strings captured`` () =
   let mutable action = ""
   let router =
     Routes2(
-      getProjStatsHandler = (fun () -> ()),
-      getProjActionHandler = (fun routeAction -> action <- routeAction)
+      getProjStats = (fun () -> ()),
+      getProjAction = (fun routeAction -> action <- routeAction)
     )
   router.DispatchRoute("GET", "projects/aggregate")
   Assert.AreEqual(action, "aggregate")

@@ -8,18 +8,15 @@ open Microsoft.Owin.Host.HttpListener
 
 [<Literal>]
 let routes = """
-  GET projects/{projectId}/comments/{commentId} as getProjectComments
-  PUT projects/{proj}/comments/{comm}
-  GET projects/{projectId}/foo/bar as getProject
-  GET projects/{a:int}/d
-  GET projects/{b:string}/{c:string}
+  GET  projects/{project}/comments/{comment} as getProjectComments
+  POST projects/{project}/comments as putProjectComments
 """
 
 type Routes = IsakSky.RouteProvider<routes, "Microsoft.Owin.IOwinContext">
 
-let router = Routes(getProjectCommentsHandler = (fun ctx projectId commentId -> 
-                                                  ctx.Response.Write(sprintf "You asked for project %d and comment %d" projectId commentId)),
-                    getProjectHandler = (fun ctx projectId -> 
+let router = Routes(getProjectComments = (fun ctx projectId commentId -> 
+  ctx.Response.Write(sprintf "You asked for project %d and comment %d" projectId commentId)),
+                    putProjectComments = (fun ctx projectId -> 
                                           ctx.Response.Write(sprintf "You asked for project %d" projectId)))
 
 type WebApp() =

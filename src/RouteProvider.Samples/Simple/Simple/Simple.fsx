@@ -12,13 +12,13 @@ let routes = """
 type MyRoutes = IsakSky.RouteProvider<routes>
 
 let router = MyRoutes(
-              getProjectHandler = (fun projectId -> printfn "You asked for project %d" projectId),
-              getProjectCommentsHandler = (fun projectId commentId ->
+              getProject = (fun projectId -> printfn "You asked for project %d" projectId),
+              getProjectComments = (fun projectId commentId ->
                                                                     printfn "You asked for project %d and comment %d" projectId commentId),
-              updateProjectHandler = (fun p -> printfn "Updated project %d" p),
+              updateProject = (fun p -> printfn "Updated project %d" p),
               // If you don't provide a route name, one will be computed for you
-              GET__projects_statisticsHandler = (fun () -> printfn "You asked for project statistics"),
-              getPersonHandler = (fun name -> printfn "You asked for a person called \"%s\"" name))
+              GET__projects_statistics = (fun () -> printfn "You asked for project statistics"),
+              getPerson = (fun name -> printfn "You asked for a person called \"%s\"" name))
 
 MyRoutes.Builders.getProject(1L)
 MyRoutes.Builders.getProjectComments(1L, 123L)
