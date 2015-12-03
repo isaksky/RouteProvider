@@ -3,11 +3,6 @@
 open Route
 open FParsec
 
-// Sample routes:
-// GET projects/{project_id}
-// POST projects/{project_id}
-// DELETE projects/{project_id}
-
 let pidentifier = identifier (new IdentifierOptions())
 
 let pVerb = many1SatisfyL isAsciiUpper "1 OR more upper case letters (HTTP VERB)"
