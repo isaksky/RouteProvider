@@ -11,11 +11,20 @@ let pTypeAnnotation = pchar ':' >>? choice [attempt <| pstring "int64" >>% Int64
                                             attempt <| pstring "int" >>% IntSeg
                                             pstring "string" >>% StringSeg]
 
-let pConstantSeg = pidentifier |>> ConstantSeg
-
 let isNameStart c = isLetter (c) || c = '_'
 let isNameCont c = isLetter (c) || isDigit (c) || c = '_'
 let pname = many1Satisfy2L isNameStart isNameCont "1 or more digit, letters or underscores"
+
+let isConstSegChar c =
+  isLetter(c) ||
+  isDigit(c) ||
+  match c with
+  | '_' | '.' | '_' | '~' | '!'
+  | '$' | '&' | ''' | '(' |')'
+  | '*' | '+' | ';' | '=' | ':' | '@' -> true
+  | _ -> false
+
+let pConstantSeg = many1Satisfy isConstSegChar |>> ConstantSeg
 
 let pDynSeg = 
   pname .>>. opt pTypeAnnotation |>> fun (name, ann) -> 
