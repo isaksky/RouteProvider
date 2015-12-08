@@ -44,6 +44,10 @@ To integrate with the web library you are using, you can pass in a fully qualifi
     
 The generated dispatch and handler functions will then take that type as the first argument.
 
+## Brief demo in visual studio:
+
+https://www.youtube.com/watch?v=r7cdeTzPY58
+
 ## Todo
 - Option for user type that handler functions must return (e.g., HttpWebResponse)
 - Allow routes to be defined in a seperate file
