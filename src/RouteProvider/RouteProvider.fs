@@ -41,6 +41,14 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
         override this.RawDefaultValue with get() = "" :> obj
         override this.DefaultValue with get() = "" :> obj
     }
+    { new ParameterInfo() with
+        override this.Name with get() = "returnTypeName"
+        override this.Position with get() = 2
+        override this.ParameterType with get() = typeof<string>
+        override this.Attributes with get() = ParameterAttributes.Optional
+        override this.RawDefaultValue with get() = "" :> obj
+        override this.DefaultValue with get() = "" :> obj
+    }
   |]  
   //member this.ResolveAssembly(args) =
 
@@ -60,10 +68,11 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
 
         let compilerArgs = 
           match staticArguments with
-          | [|:? string as routeStr; :? string as inputTypeName|] ->
+          | [|:? string as routeStr; :? string as inputTypeName; :? string as returnTypeName|] ->
             { RouteCompiler.RouteProviderOptions.routesStr = routeStr
               RouteCompiler.RouteProviderOptions.typeName = typeName
               RouteCompiler.RouteProviderOptions.inputTypeName = if inputTypeName = "" then None else Some(inputTypeName) 
+              RouteCompiler.RouteProviderOptions.returnTypeName = if returnTypeName = "" then None else Some(returnTypeName) 
               RouteCompiler.RouteProviderOptions.config = cfg}
           | _ ->
             failwithf "Bad params: %A" staticArguments

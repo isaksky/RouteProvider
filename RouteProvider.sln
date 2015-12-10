@@ -37,6 +37,7 @@ Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		DebugOwin|Any CPU = DebugOwin|Any CPU
+		DebugSystemWebReturnType|Any CPU = DebugSystemWebReturnType|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
@@ -44,6 +45,8 @@ Global
 		{7D393D4E-BD13-4E62-84C2-7F91C8F2F64D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7D393D4E-BD13-4E62-84C2-7F91C8F2F64D}.DebugOwin|Any CPU.ActiveCfg = DebugOwin|Any CPU
 		{7D393D4E-BD13-4E62-84C2-7F91C8F2F64D}.DebugOwin|Any CPU.Build.0 = DebugOwin|Any CPU
+		{7D393D4E-BD13-4E62-84C2-7F91C8F2F64D}.DebugSystemWebReturnType|Any CPU.ActiveCfg = DebugSystemWebReturnType|Any CPU
+		{7D393D4E-BD13-4E62-84C2-7F91C8F2F64D}.DebugSystemWebReturnType|Any CPU.Build.0 = DebugSystemWebReturnType|Any CPU
 		{7D393D4E-BD13-4E62-84C2-7F91C8F2F64D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7D393D4E-BD13-4E62-84C2-7F91C8F2F64D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection

@@ -42,14 +42,13 @@ To integrate with the web library you are using, you can pass in a fully qualifi
 
     type Routes = IsakSky.RouteProvider<routes, "Microsoft.Owin.IOwinContext">
     
-The generated dispatch and handler functions will then take that type as the first argument.
+The generated dispatch and handler functions will then take that type as the first argument. You can also specify a type name as the third argument, which will make the dispatch function have a return type, and will require all of you handlers to return that type.
 
 ## Brief demo in visual studio:
 
 https://www.youtube.com/watch?v=r7cdeTzPY58
 
 ## Todo
-- Option for user type that handler functions must return (e.g., HttpWebResponse)
 - Allow routes to be defined in a seperate file
 
 ## Comparison with other approaches

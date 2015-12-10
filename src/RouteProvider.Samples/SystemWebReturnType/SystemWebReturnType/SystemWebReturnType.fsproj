@@ -5,14 +5,14 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>e8c9ce57-5df0-4b88-8290-9fe2318aa28d</ProjectGuid>
+    <ProjectGuid>ee16cdcb-ff13-401a-acbb-82ddd496c5db</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>Simple</RootNamespace>
-    <AssemblyName>Simple</AssemblyName>
+    <RootNamespace>SystemWebReturnType</RootNamespace>
+    <AssemblyName>SystemWebReturnType</AssemblyName>
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <TargetFSharpCoreVersion>4.4.0.0</TargetFSharpCoreVersion>
-    <Name>Simple</Name>
+    <Name>SystemWebReturnType</Name>
     <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -24,7 +24,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <DocumentationFile>bin\Debug\Simple.XML</DocumentationFile>
+    <DocumentationFile>bin\Debug\SystemWebReturnType.XML</DocumentationFile>
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
@@ -35,7 +35,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <DocumentationFile>bin\Release\Simple.XML</DocumentationFile>
+    <DocumentationFile>bin\Release\SystemWebReturnType.XML</DocumentationFile>
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
@@ -43,8 +43,8 @@
     <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
       <Private>True</Private>
     </Reference>
-    <Reference Include="Owin">
-      <HintPath>..\..\..\..\packages\Owin\lib\net40\Owin.dll</HintPath>
+    <Reference Include="RouteProvider">
+      <HintPath>..\..\..\RouteProvider\bin\DebugSystemWebReturnType\RouteProvider.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -52,7 +52,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
-    <None Include="Simple.fsx" />
+    <Compile Include="Program.fs" />
     <None Include="App.config" />
   </ItemGroup>
   <PropertyGroup>

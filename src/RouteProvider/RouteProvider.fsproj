@@ -9,8 +9,8 @@
     <OutputType>Library</OutputType>
     <RootNamespace>RouteProvider</RootNamespace>
     <AssemblyName>RouteProvider</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
-    <TargetFSharpCoreVersion>4.3.0.0</TargetFSharpCoreVersion>
+    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
+    <TargetFSharpCoreVersion>4.4.0.0</TargetFSharpCoreVersion>
     <Name>RouteProvider</Name>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -54,6 +54,20 @@
     <StartProgram>C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\devenv.exe</StartProgram>
     <StartArguments>..\..\..\RouteProvider.Samples\SampleWithOwin\SampleWithOwin\SampleWithOwin.fsproj</StartArguments>
     <OutputPath>bin\DebugOwin\</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'DebugSystemWebReturnType|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <Tailcalls>false</Tailcalls>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <WarningLevel>3</WarningLevel>
+    <DocumentationFile>.\bin\Debug\RouteProvider.xml</DocumentationFile>
+    <OtherFlags>--warnon:1182</OtherFlags>
+    <StartAction>Program</StartAction>
+    <StartProgram>C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\devenv.exe</StartProgram>
+    <StartArguments>..\..\..\RouteProvider.Samples\SystemWebReturnType\SystemWebReturnType.sln</StartArguments>
+    <OutputPath>bin\DebugSystemWebReturnType\</OutputPath>
   </PropertyGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '11.0'">
