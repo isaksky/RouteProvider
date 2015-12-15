@@ -22,7 +22,7 @@ let router =
 [<EntryPoint>]
 let main argv = 
     let listener = new HttpListener()
-    listener.Prefixes.Add("http://localhost:8080/")
+    listener.Prefixes.Add("http://localhost:3000/")
     listener.Start()
     Console.WriteLine("Listening...")
     for idx in [0..5] do

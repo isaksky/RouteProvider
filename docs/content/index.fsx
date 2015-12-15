@@ -2,7 +2,7 @@
 // This block of code is omitted in the generated HTML documentation. Use 
 // it to define helpers that you do not want to show in the documentation.
 #I "../../bin"
-
+#r @"..\..\bin\RouteProvider\RouteProvider.dll"
 (**
 RouteProvider
 ======================
@@ -22,30 +22,65 @@ Documentation
 
 Example
 -------
-
-This example demonstrates using a function defined in this sample library.
-
+This example initializes RouteProvider with 5 different routes:
 *)
-#r "RouteProvider.dll"
-open RouteProvider
 
-printfn "hello = %i" <| Library.hello 0
+[<Literal>]
+let routes = """
+  GET projects/{projectId} as getProject
+  GET projects/{projectId}/comments/{commentId} as getProjectComments
+  PUT projects/{projectId:int} as updateProject
+  GET projects/statistics
+  GET people/{name:string} as getPerson
+"""
+
+type MyRoutes = IsakSky.RouteProvider<routes>
 
 (**
-Some more info
+We can then build routes using this type in a strongly typed way:
+*)
+let path1 = MyRoutes.Builders.getProjectComments(123L,4L)
+let path2 = MyRoutes.Builders.getPerson("jack")
+(**
+We can also create a router:
+*)
+let router =
+  MyRoutes(
+    getProject = (fun projectId -> 
+      printfn "You asked for project %d" projectId),
+    getProjectComments = (fun projectId commentId ->
+      printfn "You asked for project %d and comment %d" projectId commentId),
+    updateProject = (fun p -> 
+      printfn "Updated project %d" p),
+    // If you don't provide a route name, one will be computed for you
+    GET__projects_statistics = (fun () -> printfn "You asked for project statistics"),
+    getPerson = (fun name -> printfn "You asked for a person called \"%s\"" name))
 
-Samples & documentation
+(**
+We can then dispatch routes to this router like this, and the appropriate handler will be executed:
+*)
+router.DispatchRoute("GET", "projects/4321/comments/1234")
+// "You asked for project 4321 and comment 1234"
+(**
+
+Sample projects
 -----------------------
+ * [Simple](https://github.com/isaksky/RouteProvider/blob/master/src/RouteProvider.Samples/Simple/Simple/Simple.fsx) A basic command line example
 
-The library comes with comprehensible documentation. 
-It can include tutorials automatically generated from `*.fsx` files in [the content folder][content]. 
-The API reference is automatically generated from Markdown comments in the library implementation.
+ * [Web app - Owin Input type](https://github.com/isaksky/RouteProvider/blob/master/src/RouteProvider.Samples/SampleWithOwin/SampleWithOwin/Program.fs) A basic web app with a few routes, using an Owin input type
 
- * [Tutorial](tutorial.html) contains a further explanation of this sample library.
+ * [Web app - System Web](https://github.com/isaksky/RouteProvider/blob/master/src/RouteProvider.Samples/SystemWebReturnType/SystemWebReturnType/Program.fs) A basic web app, specifying a HttpListenerContext as an input type, and a string as a return type
 
- * [API Reference](reference/index.html) contains automatically generated documentation for all types, modules
-   and functions in the library. This includes additional brief samples on using most of the
-   functions.
+ * [API Reference](reference/index.html) automatically generated documentation for all types
+
+ Code generation samples:
+ ------------------------
+
+ * [Plain](notypes.html)
+
+ * [Input type](input_type.html)
+
+ * [Input and return type](input_and_return_type.html)
  
 Contributing and copyright
 --------------------------

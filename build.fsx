@@ -192,7 +192,6 @@ Target "PublishNuget" (fun _ ->
             WorkingDir = "bin" })
 )
 
-
 // --------------------------------------------------------------------------------------
 // Generate the documentation
 
@@ -333,7 +332,6 @@ Target "Release" (fun _ ->
 )
 
 Target "BuildPackage" DoNothing
-
 // --------------------------------------------------------------------------------------
 // Run all targets by default. Invoke 'build <Target>' to override
 

@@ -1,4 +1,4 @@
-namespace RouteProvider
+namespace IsakSky.RouteProvider
 
 open System
 open System.Reflection
@@ -73,7 +73,7 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
               RouteCompiler.RouteProviderOptions.typeName = typeName
               RouteCompiler.RouteProviderOptions.inputTypeName = if inputTypeName = "" then None else Some(inputTypeName) 
               RouteCompiler.RouteProviderOptions.returnTypeName = if returnTypeName = "" then None else Some(returnTypeName) 
-              RouteCompiler.RouteProviderOptions.config = cfg}
+              RouteCompiler.RouteProviderOptions.config = Some cfg}
           | _ ->
             failwithf "Bad params: %A" staticArguments
         RouteCompiler.compileRoutes compilerArgs
