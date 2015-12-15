@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <title>notypes</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="description" content="A type provider for normal RESTy routes"/>
+    <meta name="author" content="Isak Sky"/>
+
+    <script src="https://code.jquery.com/jquery-1.8.0.js"></script>
+    <script src="https://code.jquery.com/ui/1.8.23/jquery-ui.js"></script>
+    <script src="https://netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/js/bootstrap.min.js"></script>
+    <link href="https://netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/css/bootstrap-combined.min.css" rel="stylesheet"/>
+
+    <link type="text/css" rel="stylesheet" href="/RouteProvider/content/style.css" />
+    <script type="text/javascript" src="/RouteProvider/content/tips.js"></script>
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="https://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="container">
+      <div class="masthead">
+        <ul class="nav nav-pills pull-right">
+          <li><a href="http://fsharp.org">fsharp.org</a></li>
+          <li><a href="http://github.com/isaksky/RouteProvider">github page</a></li>
+        </ul>
+        <h3 class="muted"><a href="/RouteProvider/index.html">RouteProvider</a></h3>
+      </div>
+      <hr />
+      <div class="row">
+        <div class="span9" id="main">
+          
+<p>Configuration:</p>
+
+<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
+</pre></td>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">type</span> <span onmouseout="hideTip(event, 'fs1', 1)" onmouseover="showTip(event, 'fs1', 1)" class="t">MyRoutes</span> <span class="o">=</span> <span class="i">IsakSky</span><span class="o">.</span><span class="i">RouteProvider</span><span class="o">&lt;</span><span class="i">routes</span><span class="o">&gt;</span>
+</code></pre></td>
+</tr>
+</table>
+
+<p>Generated code:</p>
+
+<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l"> 1: </span>
+<span class="l"> 2: </span>
+<span class="l"> 3: </span>
+<span class="l"> 4: </span>
+<span class="l"> 5: </span>
+<span class="l"> 6: </span>
+<span class="l"> 7: </span>
+<span class="l"> 8: </span>
+<span class="l"> 9: </span>
+<span class="l">10: </span>
+<span class="l">11: </span>
+<span class="l">12: </span>
+<span class="l">13: </span>
+<span class="l">14: </span>
+<span class="l">15: </span>
+<span class="l">16: </span>
+<span class="l">17: </span>
+<span class="l">18: </span>
+<span class="l">19: </span>
+<span class="l">20: </span>
+<span class="l">21: </span>
+<span class="l">22: </span>
+<span class="l">23: </span>
+<span class="l">24: </span>
+<span class="l">25: </span>
+<span class="l">26: </span>
+<span class="l">27: </span>
+<span class="l">28: </span>
+<span class="l">29: </span>
+<span class="l">30: </span>
+<span class="l">31: </span>
+<span class="l">32: </span>
+<span class="l">33: </span>
+<span class="l">34: </span>
+<span class="l">35: </span>
+<span class="l">36: </span>
+<span class="l">37: </span>
+<span class="l">38: </span>
+<span class="l">39: </span>
+<span class="l">40: </span>
+<span class="l">41: </span>
+<span class="l">42: </span>
+<span class="l">43: </span>
+<span class="l">44: </span>
+<span class="l">45: </span>
+<span class="l">46: </span>
+<span class="l">47: </span>
+<span class="l">48: </span>
+<span class="l">49: </span>
+<span class="l">50: </span>
+<span class="l">51: </span>
+<span class="l">52: </span>
+<span class="l">53: </span>
+<span class="l">54: </span>
+<span class="l">55: </span>
+<span class="l">56: </span>
+<span class="l">57: </span>
+<span class="l">58: </span>
+<span class="l">59: </span>
+<span class="l">60: </span>
+<span class="l">61: </span>
+<span class="l">62: </span>
+<span class="l">63: </span>
+<span class="l">64: </span>
+<span class="l">65: </span>
+<span class="l">66: </span>
+<span class="l">67: </span>
+<span class="l">68: </span>
+<span class="l">69: </span>
+<span class="l">70: </span>
+<span class="l">71: </span>
+<span class="l">72: </span>
+<span class="l">73: </span>
+<span class="l">74: </span>
+<span class="l">75: </span>
+<span class="l">76: </span>
+<span class="l">77: </span>
+<span class="l">78: </span>
+<span class="l">79: </span>
+<span class="l">80: </span>
+<span class="l">81: </span>
+<span class="l">82: </span>
+<span class="l">83: </span>
+<span class="l">84: </span>
+<span class="l">85: </span>
+<span class="l">86: </span>
+<span class="l">87: </span>
+<span class="l">88: </span>
+<span class="l">89: </span>
+<span class="l">90: </span>
+<span class="l">91: </span>
+<span class="l">92: </span>
+<span class="l">93: </span>
+<span class="l">94: </span>
+<span class="l">95: </span>
+<span class="l">96: </span>
+<span class="l">97: </span>
+<span class="l">98: </span>
+</pre></td>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="csharp"><span class="k">using</span> System;
+<span class="k">namespace</span> IsakSky {
+  <span class="k">public</span> <span class="k">class</span> MyRoutes {
+    <span class="k">public</span> <span class="k">static</span> <span class="k">class</span> Builders{
+      <span class="k">public</span> <span class="k">static</span> <span class="k">string</span> getProject(<span class="k">long</span> projectId){
+        <span class="k">return</span> <span class="k">string</span>.Format(<span class="s">"/projects/{0}"</span>, projectId);
+      }
+      <span class="k">public</span> <span class="k">static</span> <span class="k">string</span> getProjectComments(<span class="k">long</span> projectId, <span class="k">long</span> commentId){
+        <span class="k">return</span> <span class="k">string</span>.Format(<span class="s">"/projects/{0}/comments/{1}"</span>, projectId, commentId);
+      }
+      <span class="k">public</span> <span class="k">static</span> <span class="k">string</span> updateProject(<span class="k">int</span> projectId){
+        <span class="k">return</span> <span class="k">string</span>.Format(<span class="s">"/projects/{0}"</span>, projectId);
+      }
+      <span class="k">public</span> <span class="k">static</span> <span class="k">string</span> GET__projects_statistics(){
+        <span class="k">return</span> <span class="s">"/projects/statistics"</span>;
+      }
+      <span class="k">public</span> <span class="k">static</span> <span class="k">string</span> getPerson(<span class="k">string</span> name){
+        <span class="k">return</span> <span class="k">string</span>.Format(<span class="s">"/people/{0}"</span>, name);
+      }
+    }
+    <span class="k">public</span> MyRoutes(
+      Action&lt;<span class="k">long</span>&gt; getProject,
+      Action&lt;<span class="k">long</span>, <span class="k">long</span>&gt; getProjectComments,
+      Action&lt;<span class="k">int</span>&gt; updateProject,
+      Action GET__projects_statistics,
+      Action&lt;<span class="k">string</span>&gt; getPerson) {
+        <span class="k">this</span>.getProject <span class="o">=</span> getProject;
+        <span class="k">this</span>.getProjectComments <span class="o">=</span> getProjectComments;
+        <span class="k">this</span>.updateProject <span class="o">=</span> updateProject;
+        <span class="k">this</span>.GET__projects_statistics <span class="o">=</span> GET__projects_statistics;
+        <span class="k">this</span>.getPerson <span class="o">=</span> getPerson;
+      }
+    <span class="k">public</span> <span class="k">readonly</span> Action&lt;<span class="k">long</span>&gt; getProject;
+    <span class="k">public</span> <span class="k">readonly</span> Action&lt;<span class="k">long</span>, <span class="k">long</span>&gt; getProjectComments;
+    <span class="k">public</span> <span class="k">readonly</span> Action&lt;<span class="k">int</span>&gt; updateProject;
+    <span class="k">public</span> <span class="k">readonly</span> Action GET__projects_statistics;
+    <span class="k">public</span> <span class="k">readonly</span> Action&lt;<span class="k">string</span>&gt; getPerson;
+
+    <span class="k">public</span> <span class="k">void</span> DispatchRoute(<span class="k">string</span> verb, <span class="k">string</span> path) {
+      <span class="k">var</span> parts <span class="o">=</span> path.Split(<span class="s">'/'</span>);
+      <span class="k">var</span> start <span class="o">=</span> 0;
+      <span class="k">if</span> (parts[0] <span class="o">=</span><span class="o">=</span> <span class="s">""</span>) { start <span class="o">=</span> 1; }
+      <span class="k">var</span> endOffset <span class="o">=</span> parts.Length <span class="o">&gt;</span> 0 <span class="o">&amp;</span><span class="o">&amp;</span> parts[parts.Length <span class="o">-</span> 1] <span class="o">=</span><span class="o">=</span> <span class="s">""</span> <span class="o">?</span> 1 <span class="o">:</span> 0;
+      <span class="k">switch</span> (parts.Length <span class="o">-</span> start <span class="o">-</span> endOffset) {
+        <span class="k">case</span> 2:
+          <span class="k">if</span> (parts[start <span class="o">+</span> 0] <span class="o">=</span><span class="o">=</span> <span class="s">"people"</span>){
+            {
+              <span class="k">var</span> name <span class="o">=</span> parts[start <span class="o">+</span> 1];
+              <span class="k">if</span> (verb <span class="o">=</span><span class="o">=</span> <span class="s">"GET"</span>) { <span class="k">this</span>.getPerson(name); <span class="k">return</span>; }
+            }
+          }
+          <span class="k">if</span> (parts[start <span class="o">+</span> 0] <span class="o">=</span><span class="o">=</span> <span class="s">"projects"</span>){
+            <span class="k">if</span> (parts[start <span class="o">+</span> 1] <span class="o">=</span><span class="o">=</span> <span class="s">"statistics"</span>){
+              <span class="k">if</span> (verb <span class="o">=</span><span class="o">=</span> <span class="s">"GET"</span>) { <span class="k">this</span>.GET__projects_statistics(); <span class="k">return</span>; }
+            }
+            <span class="k">else</span> <span class="k">if</span> (StringIsAllDigits(parts[start <span class="o">+</span> 1])){
+              <span class="k">var</span> projectId <span class="o">=</span> <span class="k">long</span>.Parse(parts[start <span class="o">+</span> 1]);
+              <span class="k">if</span> (verb <span class="o">=</span><span class="o">=</span> <span class="s">"GET"</span>) { <span class="k">this</span>.getProject(projectId); <span class="k">return</span>; }
+            }
+            <span class="k">else</span> <span class="k">if</span> (StringIsAllDigits(parts[start <span class="o">+</span> 1])){
+              <span class="k">var</span> projectId <span class="o">=</span> <span class="k">int</span>.Parse(parts[start <span class="o">+</span> 1]);
+              <span class="k">if</span> (verb <span class="o">=</span><span class="o">=</span> <span class="s">"PUT"</span>) { <span class="k">this</span>.updateProject(projectId); <span class="k">return</span>; }
+            }
+          }
+          <span class="k">break</span>;
+        <span class="k">case</span> 4:
+          <span class="k">if</span> (parts[start <span class="o">+</span> 0] <span class="o">=</span><span class="o">=</span> <span class="s">"projects"</span>){
+            <span class="k">if</span> (StringIsAllDigits(parts[start <span class="o">+</span> 1])){
+              <span class="k">var</span> projectId <span class="o">=</span> <span class="k">long</span>.Parse(parts[start <span class="o">+</span> 1]);
+              <span class="k">if</span> (parts[start <span class="o">+</span> 2] <span class="o">=</span><span class="o">=</span> <span class="s">"comments"</span>){
+                <span class="k">if</span> (StringIsAllDigits(parts[start <span class="o">+</span> 3])){
+                  <span class="k">var</span> commentId <span class="o">=</span> <span class="k">long</span>.Parse(parts[start <span class="o">+</span> 3]);
+                  <span class="k">if</span> (verb <span class="o">=</span><span class="o">=</span> <span class="s">"GET"</span>) { <span class="k">this</span>.getProjectComments(projectId, commentId); <span class="k">return</span>; }
+                }
+              }
+            }
+          }
+          <span class="k">break</span>;
+        <span class="k">default</span>: <span class="k">break</span>;
+      }
+      <span class="k">throw</span> <span class="k">new</span> RouteNotMatchedException(verb, path);
+    }
+    <span class="k">static</span> <span class="k">bool</span> StringIsAllDigits(<span class="k">string</span> s) {
+      <span class="k">foreach</span> (<span class="k">char</span> c <span class="k">in</span> s) {
+        <span class="k">if</span> (c <span class="o">&lt;</span> <span class="s">'0'</span> <span class="o">|</span><span class="o">|</span> c <span class="o">&gt;</span> <span class="s">'9'</span>) { <span class="k">return</span> <span class="k">false</span>; }
+      }
+      <span class="k">return</span> <span class="k">true</span>;
+    }
+    <span class="k">public</span> <span class="k">class</span> RouteNotMatchedException <span class="o">:</span> Exception {
+      <span class="k">public</span> <span class="k">string</span> Verb { get; <span class="k">private</span> set; }
+      <span class="k">public</span> <span class="k">string</span> Path { get; <span class="k">private</span> set; }
+      <span class="k">public</span> RouteNotMatchedException(<span class="k">string</span> verb, <span class="k">string</span> path) {
+        <span class="k">this</span>.Verb <span class="o">=</span> verb;
+        <span class="k">this</span>.Path <span class="o">=</span> path;
+      }
+    }
+  }
+}</code></pre></td></tr></table>
+
+<div class="tip" id="fs1">type MyRoutes = obj<br /><br />Full name: notypes.MyRoutes</div>
+
+        </div>
+        <div class="span3">
+          <img src="/RouteProvider/img/logo.png" alt="F# Project" style="width:150px;margin:10px" />  
+          <ul class="nav nav-list" id="menu" style="margin-top: 20px;">
+            <li class="nav-header">RouteProvider</li>
+            <li><a href="/RouteProvider/index.html">Home page</a></li>
+            <li class="divider"></li>
+            <li><a href="http://nuget.org/packages/RouteProvider">Get Library via NuGet</a></li>
+            <li><a href="http://github.com/isaksky/RouteProvider">Source Code on GitHub</a></li>
+            <li><a href="/RouteProvider/license.html">License</a></li>
+            <li><a href="/RouteProvider/release-notes.html">Release Notes</a></li>
+            
+            <li class="nav-header">Sample projects</li>
+            <li><a href="https://github.com/isaksky/RouteProvider/blob/master/src/RouteProvider.Samples/Simple/Simple/Simple.fsx">Plain</a></li>
+            <li><a href="https://github.com/isaksky/RouteProvider/blob/master/src/RouteProvider.Samples/SampleWithOwin/SampleWithOwin/Program.fs">Web app - Owin Input type</a></li>
+            <li><a href="https://github.com/isaksky/RouteProvider/blob/master/src/RouteProvider.Samples/SystemWebReturnType/SystemWebReturnType/Program.fs">Web app - System Web (input and return type)</a></li>
+
+            <li class="nav-header">Code generation</li>
+            <li><a href="/RouteProvider/notypes.html">Plain</a></li>
+            <li><a href="/RouteProvider/input_type.html">Input type</a></li>
+            <li><a href="/RouteProvider/input_and_return_type.html">Input and return type</a></li>
+
+            <li class="nav-header">Documentation</li>
+            <li><a href="/RouteProvider/reference/index.html">API Reference</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <a href="http://github.com/isaksky/RouteProvider"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"/></a>
+  </body>
+  </html>
