@@ -31,17 +31,17 @@ let project = "RouteProvider"
 
 // Short summary of the project
 // (used as description in AssemblyInfo and as a short summary for NuGet package)
-let summary = "A type provider for normal RESTy routes"
+let summary = "A type provider for web routing"
 
 // Longer description of the project
 // (used as a description for NuGet package; line breaks are automatically cleaned up)
-let description = "A type provider for normal RESTy routes. Reads a routes file and provides types for them."
+let description = "An F# Type Provider for web routing. Reads a routes file and provides types for them."
 
 // List of author names (for NuGet package)
 let authors = [ "Isak Sky" ]
 
 // Tags for your project (for NuGet package)
-let tags = "routes REST"
+let tags = "routes REST routing"
 // File system information 
 let solutionFile  = "RouteProvider.sln"
 
@@ -53,8 +53,7 @@ let testAssemblies = "tests/**/bin/Release/*Tests*.dll"
 // Git configuration (used for publishing documentation in gh-pages branch)
 // The profile where the project is posted
 let gitOwner = "isaksky" 
-let gitHome = "https://github.com/" + gitOwner
-
+let gitHome = "git@github.com:isaksky"
 // The name of the project on GitHub
 let gitName = "RouteProvider"
 
@@ -305,7 +304,8 @@ Target "AddLangDocs" (fun _ ->
 Target "ReleaseDocs" (fun _ ->
     let tempDocsDir = "temp/gh-pages"
     CleanDir tempDocsDir
-    Repository.cloneSingleBranch "" (gitHome + "/" + gitName + ".git") "gh-pages" tempDocsDir
+    let repo = (gitHome + "/" + gitName + ".git")
+    Repository.cloneSingleBranch "" repo "gh-pages" tempDocsDir
 
     CopyRecursive "docs/output" tempDocsDir true |> tracefn "%A"
     StageAll tempDocsDir
