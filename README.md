@@ -46,6 +46,8 @@ The generated dispatch and handler functions will then take that type as the fir
 
 ## Example
 
+Example with both input and return types specified:
+
 ![Example](/demo.png?raw=true "Example")
 
 ## Brief demo in visual studio:
