@@ -498,7 +498,12 @@ module RouteCompiler =
             w.StartWriteLine "break;")
         w.StartWriteLine <| "default: break;")
       w.StartWriteLine <| "if (this.notFound == null) { throw new RouteNotMatchedException(verb, path); }"
-      w.StartWriteLine <| "else { this.notFound(verb, path); }")
+
+      let notFoundArgs' = ["verb"; "path"]
+      let notFoundArgs = if options.inputTypeName.IsSome then "context" :: notFoundArgs' else notFoundArgs'
+      let notFoundArgsStr = notFoundArgs |> String.concat ", "
+      let retStr = if options.returnTypeName.IsSome then "return " else ""
+      w.StartWriteLine <| sprintf "else { %sthis.notFound(%s); }" retStr notFoundArgsStr)
 
   let digitCheckFn = """
   static bool StringIsAllDigits(string s) {

@@ -90,7 +90,7 @@ Generated code with input type "Microsoft.Owin.IOwinContext" and return type "Ht
             default: break;
           }
           if (this.notFound == null) { throw new RouteNotMatchedException(verb, path); }
-          else { this.notFound(verb, path); }
+          else { return this.notFound(context, verb, path); }
         }
         static bool StringIsAllDigits(string s) {
           foreach (char c in s) {
