@@ -230,7 +230,7 @@
         <span class="k">default</span>: <span class="k">break</span>;
       }
       <span class="k">if</span> (<span class="k">this</span>.notFound <span class="o">=</span><span class="o">=</span> <span class="k">null</span>) { <span class="k">throw</span> <span class="k">new</span> RouteNotMatchedException(verb, path); }
-      <span class="k">else</span> { <span class="k">this</span>.notFound(verb, path); }
+      <span class="k">else</span> { <span class="k">this</span>.notFound(context, verb, path); }
     }
     <span class="k">static</span> <span class="k">bool</span> StringIsAllDigits(<span class="k">string</span> s) {
       <span class="k">foreach</span> (<span class="k">char</span> c <span class="k">in</span> s) {
