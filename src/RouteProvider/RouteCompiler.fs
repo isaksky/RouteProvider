@@ -192,27 +192,38 @@ module RouteCompiler =
     else
       ftype
 
+  let notFoundHandlerParams = [
+    StringParam("Verb")
+    StringParam("Path")
+  ]
+
+  let notFoundCtorStr (options:RouteProviderOptions) =
+    let typeStr = paramListTypeString notFoundHandlerParams options
+    sprintf "%s notFound" typeStr
+
   let renderMainCtor (klassName:string) (ctorParams:HandlerCtorParam list) (options:RouteProviderOptions) (w:ClassWriter) =
     w.StartWriteLine <| sprintf "public %s(" klassName
 
-    using (w.indent()) (fun _ ->
+    using (w.indent()) <| fun _ ->
         let ctorParams = ctorParams |> Array.ofList
         for i in [0..ctorParams.Length - 1] do
           let ctorParam = ctorParams.[i]
           let ctorArgs = ctorParam.handlerArgs |> List.map (function | FunctionParam(p) -> p)
           w.StartWrite <| sprintf "%s %s" (paramListTypeString ctorArgs options) (ctorParam.name)
-          if i <> ctorParams.Length - 1 then
-            w.Write(",\n")  
-      
-        w.Write(") ")
-        using (w.block()) (fun _ ->
+          w.Write(",\n")
+        w.StartWrite <| notFoundCtorStr options
+        w.Write(" = null) ")
+
+        using (w.block())  <| fun _ ->
           for ctorParam in ctorParams do
-              w.StartWriteLine <| (sprintf "this.%s = %s;" (ctorParam.name) (ctorParam.name))))
+            w.StartWriteLine <| sprintf "this.%s = %s;" (ctorParam.name) (ctorParam.name)
+          w.StartWriteLine <| sprintf "this.notFound = notFound;"
 
   let renderHandlerCtorParamsIvars (ctorParams:HandlerCtorParam list) (options:RouteProviderOptions) (w:ClassWriter) =
     for ctorParam in ctorParams do
       let pms = ctorParam.handlerArgs |> List.map (function | FunctionParam(p) -> p)
       w.StartWriteLine <| (sprintf "public readonly %s %s;" (paramListTypeString pms options) (ctorParam.name))
+    w.StartWriteLine <| sprintf "public readonly %s;" (notFoundCtorStr options)
 
   type RouteNode = 
     { endPoints: Endpoint list
@@ -471,7 +482,7 @@ module RouteCompiler =
       | None -> "void"
     
     let argsStr = args |> String.concat ", "
-    w.StartWrite<| sprintf "public %s DispatchRoute(%s) " retTp argsStr
+    w.StartWrite <| sprintf "public %s DispatchRoute(%s) " retTp argsStr
     using (w.block()) (fun _ ->
       w.StartWriteLine <| "var parts = path.Split('/');"
       // Normalize starting and ending slash
@@ -486,7 +497,8 @@ module RouteCompiler =
             renderRouteGroupMatchTest group options w
             w.StartWriteLine "break;")
         w.StartWriteLine <| "default: break;")
-      w.StartWriteLine <| "throw new RouteNotMatchedException(verb, path);")
+      w.StartWriteLine <| "if (this.notFound == null) { throw new RouteNotMatchedException(verb, path); }"
+      w.StartWriteLine <| "else { this.notFound(verb, path); }")
 
   let digitCheckFn = """
   static bool StringIsAllDigits(string s) {

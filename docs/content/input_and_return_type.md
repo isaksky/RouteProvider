@@ -31,18 +31,21 @@ Generated code with input type "Microsoft.Owin.IOwinContext" and return type "Ht
           Func<Microsoft.Owin.IOwinContext, long, long, HttpWebResponse> getProjectComments,
           Func<Microsoft.Owin.IOwinContext, int, HttpWebResponse> updateProject,
           Func<Microsoft.Owin.IOwinContext, HttpWebResponse> GET__projects_statistics,
-          Func<Microsoft.Owin.IOwinContext, string, HttpWebResponse> getPerson) {
+          Func<Microsoft.Owin.IOwinContext, string, HttpWebResponse> getPerson,
+          Func<Microsoft.Owin.IOwinContext, string, string, HttpWebResponse> notFound = null) {
             this.getProject = getProject;
             this.getProjectComments = getProjectComments;
             this.updateProject = updateProject;
             this.GET__projects_statistics = GET__projects_statistics;
             this.getPerson = getPerson;
+            this.notFound = notFound;
           }
         public readonly Func<Microsoft.Owin.IOwinContext, long, HttpWebResponse> getProject;
         public readonly Func<Microsoft.Owin.IOwinContext, long, long, HttpWebResponse> getProjectComments;
         public readonly Func<Microsoft.Owin.IOwinContext, int, HttpWebResponse> updateProject;
         public readonly Func<Microsoft.Owin.IOwinContext, HttpWebResponse> GET__projects_statistics;
         public readonly Func<Microsoft.Owin.IOwinContext, string, HttpWebResponse> getPerson;
+        public readonly Func<Microsoft.Owin.IOwinContext, string, string, HttpWebResponse> notFound;
     
         public HttpWebResponse DispatchRoute(Microsoft.Owin.IOwinContext context, string verb, string path) {
           var parts = path.Split('/');
@@ -86,7 +89,8 @@ Generated code with input type "Microsoft.Owin.IOwinContext" and return type "Ht
               break;
             default: break;
           }
-          throw new RouteNotMatchedException(verb, path);
+          if (this.notFound == null) { throw new RouteNotMatchedException(verb, path); }
+          else { this.notFound(verb, path); }
         }
         static bool StringIsAllDigits(string s) {
           foreach (char c in s) {

@@ -31,18 +31,21 @@ Generated code with input type "Microsoft.Owin.IOwinContext":
           Action<Microsoft.Owin.IOwinContext, long, long> getProjectComments,
           Action<Microsoft.Owin.IOwinContext, int> updateProject,
           Action<Microsoft.Owin.IOwinContext> GET__projects_statistics,
-          Action<Microsoft.Owin.IOwinContext, string> getPerson) {
+          Action<Microsoft.Owin.IOwinContext, string> getPerson,
+          Action<Microsoft.Owin.IOwinContext, string, string> notFound = null) {
             this.getProject = getProject;
             this.getProjectComments = getProjectComments;
             this.updateProject = updateProject;
             this.GET__projects_statistics = GET__projects_statistics;
             this.getPerson = getPerson;
+            this.notFound = notFound;
           }
         public readonly Action<Microsoft.Owin.IOwinContext, long> getProject;
         public readonly Action<Microsoft.Owin.IOwinContext, long, long> getProjectComments;
         public readonly Action<Microsoft.Owin.IOwinContext, int> updateProject;
         public readonly Action<Microsoft.Owin.IOwinContext> GET__projects_statistics;
         public readonly Action<Microsoft.Owin.IOwinContext, string> getPerson;
+        public readonly Action<Microsoft.Owin.IOwinContext, string, string> notFound;
     
         public void DispatchRoute(Microsoft.Owin.IOwinContext context, string verb, string path) {
           var parts = path.Split('/');
@@ -86,7 +89,8 @@ Generated code with input type "Microsoft.Owin.IOwinContext":
               break;
             default: break;
           }
-          throw new RouteNotMatchedException(verb, path);
+          if (this.notFound == null) { throw new RouteNotMatchedException(verb, path); }
+          else { this.notFound(verb, path); }
         }
         static bool StringIsAllDigits(string s) {
           foreach (char c in s) {

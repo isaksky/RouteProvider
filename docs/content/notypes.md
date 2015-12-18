@@ -31,18 +31,21 @@ Generated code:
           Action<long, long> getProjectComments,
           Action<int> updateProject,
           Action GET__projects_statistics,
-          Action<string> getPerson) {
+          Action<string> getPerson,
+          Action<string, string> notFound = null) {
             this.getProject = getProject;
             this.getProjectComments = getProjectComments;
             this.updateProject = updateProject;
             this.GET__projects_statistics = GET__projects_statistics;
             this.getPerson = getPerson;
+            this.notFound = notFound;
           }
         public readonly Action<long> getProject;
         public readonly Action<long, long> getProjectComments;
         public readonly Action<int> updateProject;
         public readonly Action GET__projects_statistics;
         public readonly Action<string> getPerson;
+        public readonly Action<string, string> notFound;
     
         public void DispatchRoute(string verb, string path) {
           var parts = path.Split('/');
@@ -86,7 +89,8 @@ Generated code:
               break;
             default: break;
           }
-          throw new RouteNotMatchedException(verb, path);
+          if (this.notFound == null) { throw new RouteNotMatchedException(verb, path); }
+          else { this.notFound(verb, path); }
         }
         static bool StringIsAllDigits(string s) {
           foreach (char c in s) {
