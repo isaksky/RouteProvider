@@ -97,7 +97,7 @@ module RouteCompiler =
       { new System.IDisposable with 
           member y.Dispose() = 
             x.DecIndent() }
-    member w.block (newline:bool) = 
+    member w.block (newline:bool) =
       w.Write("{")
       if newline then w.Write("\n") else w.Write(" ")
       w.IncIndent()
@@ -476,12 +476,16 @@ module RouteCompiler =
     match routeConds with
     | [] -> failwith "Logic error"
     | [cond] ->
-      cond.preConditionCheck |> Option.iter (fun check -> 
-        w.StartWrite <| sprintf "if (%s)" check)
-      let doIndent = bodyIndent cond.body
-      using (w.block(doIndent)) <| fun _ ->
-        cond.assignment |> Option.iter (fun assig -> w.StartWriteLine assig)
-        renderRouteCondsBody (cond.body) w
+      match cond.preConditionCheck with
+      | Some(check) ->
+        w.StartWrite <| sprintf "if (%s) " check
+        let doIndent = bodyIndent cond.body
+        using (w.block(doIndent)) <| fun _ ->
+          cond.assignment |> Option.iter (fun assig -> w.StartWriteLine assig)  
+          renderRouteCondsBody (cond.body) w    
+      | None -> 
+        cond.assignment |> Option.iter (fun assig -> w.StartWriteLine assig)  
+        renderRouteCondsBody (cond.body) w    
     | _ ->
       routeConds |> List.iteri (fun i cond ->
         let keyword = 

@@ -55,33 +55,31 @@ Generated code with input type "Microsoft.Owin.IOwinContext":
           switch (parts.Length - start - endOffset) {
             case 2:
               if (parts[start + 0] == "people") {
-    {
-                  var name = parts[start + 1];
-                  if (verb == "GET"){ this.getPerson(context, name); return; }
-                }
+                var name = parts[start + 1];
+                if (verb == "GET") { this.getPerson(context, name); return; }
               }
               else if (parts[start + 0] == "projects") {
                 if (parts[start + 1] == "statistics") {
-                  if (verb == "GET"){ this.GET__projects_statistics(context); return; }
+                  if (verb == "GET") { this.GET__projects_statistics(context); return; }
                 }
                 else if (StringIsAllDigits(parts[start + 1])) {
                   var projectId = int.Parse(parts[start + 1]);
-                  if (verb == "PUT"){ this.updateProject(context, projectId); return; }
+                  if (verb == "PUT") { this.updateProject(context, projectId); return; }
                 }
                 else if (StringIsAllDigits(parts[start + 1])) {
                   var projectId = long.Parse(parts[start + 1]);
-                  if (verb == "GET"){ this.getProject(context, projectId); return; }
+                  if (verb == "GET") { this.getProject(context, projectId); return; }
                 }
               }
               break;
             case 4:
-              if (parts[start + 0] == "projects"){
-                if (StringIsAllDigits(parts[start + 1])){
+              if (parts[start + 0] == "projects") {
+                if (StringIsAllDigits(parts[start + 1])) {
                   var projectId = long.Parse(parts[start + 1]);
-                  if (parts[start + 2] == "comments"){
-                    if (StringIsAllDigits(parts[start + 3])){
+                  if (parts[start + 2] == "comments") {
+                    if (StringIsAllDigits(parts[start + 3])) {
                       var commentId = long.Parse(parts[start + 3]);
-                      if (verb == "GET"){ this.getProjectComments(context, projectId, commentId); return; }
+                      if (verb == "GET") { this.getProjectComments(context, projectId, commentId); return; }
                     }
                   }
                 }
