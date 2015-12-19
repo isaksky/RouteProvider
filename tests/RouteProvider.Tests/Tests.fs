@@ -86,3 +86,53 @@ let ``dyn strings captured`` () =
     )
   router.DispatchRoute("GET", "projects/aggregate")
   Assert.AreEqual(action, "aggregate")
+
+type Routes3 = IsakSky.RouteProvider<routesStr2, "string">
+
+[<Test>]
+let ``input type passed in correctly`` () =
+  let router =
+    Routes3(
+      getProjStats = (fun ctx -> Assert.AreEqual(ctx, "yep")),
+      getProjAction = (fun ctx s -> ())
+    )
+  router.DispatchRoute("yep", "GET", "projects/statistics")
+
+type Routes4 = IsakSky.RouteProvider<routesStr2, "", "string">
+
+[<Test>]
+let ``return type sent back`` () =
+  let router =
+    Routes4(
+      getProjStats = (fun () -> ""),
+      getProjAction = (fun routeAction -> routeAction)
+    )
+  let resp = router.DispatchRoute("GET", "projects/archive")
+  Assert.AreEqual(resp, "archive")
+
+
+[<Literal>]
+let routesStr4 = """
+  GET projects/statistics as getProjectStats
+  GET projects/{projectId:int64} as getProject
+  GET projects/{action:string} as getProjectAction
+"""
+
+type Routes5 = IsakSky.RouteProvider<routesStr4, "", "string">
+
+[<Test>]
+let ``conflicting routes ordering`` () =
+  let router =
+    Routes5(
+      getProjectStats = (fun () -> "stats"),
+      getProject = (fun projectId -> sprintf "%d" projectId),
+      getProjectAction = (fun routeAction -> routeAction)
+    )
+  let resp = router.DispatchRoute("GET", "/projects/statistics")
+  Assert.AreEqual(resp, "stats")
+  
+  let resp2 = router.DispatchRoute("GET", "/projects/archive")
+  Assert.AreEqual(resp2, "archive")
+  
+  let resp3 = router.DispatchRoute("GET", "/projects/1")
+  Assert.AreEqual(resp3, "1")

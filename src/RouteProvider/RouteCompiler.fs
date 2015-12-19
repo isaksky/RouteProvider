@@ -88,18 +88,27 @@ module RouteCompiler =
   type ClassWriter () =
     let mutable indentation = 0
     member val content = new StringBuilder() with get
+    member x.IncIndent () =
+      indentation <- indentation + 2
+    member x.DecIndent () =
+      indentation <- indentation - 2
     member x.indent () = 
-      indentation <- indentation + 2
+      x.IncIndent()
       { new System.IDisposable with 
-          member x.Dispose() = 
-            indentation <- indentation - 2 }
-    member w.block () = 
-      w.Write("{\n")
-      indentation <- indentation + 2
+          member y.Dispose() = 
+            x.DecIndent() }
+    member w.block (newline:bool) = 
+      w.Write("{")
+      if newline then w.Write("\n") else w.Write(" ")
+      w.IncIndent()
       { new System.IDisposable with 
-          member x.Dispose() = 
-            indentation <- indentation - 2
-            w.StartWriteLine("}") }
+          member y.Dispose() = 
+            w.DecIndent()
+            if newline then 
+              w.StartWriteLine("}") 
+            else w.Write(" }\n") }
+    member w.block () =
+      w.block(true)
     member x.StartWriteLine(line: string) = 
       let pfx = new string(' ', indentation)
       let s = sprintf "%s%s\n" pfx line
@@ -332,9 +341,6 @@ module RouteCompiler =
 
         let constants, mappingsMap = group (routeTree.children) [] Map.empty
 
-        for seg, child in constants do
-          yield! (walkAux child (depth + 1)) |> Seq.map (fun n -> NamedRouteSegment(seg) :: n)
-
         for KeyValue(_, mappings) in mappingsMap do
           let nodes = 
             [mappings.int64s; mappings.ints; mappings.strs] 
@@ -354,6 +360,9 @@ module RouteCompiler =
                 | _ -> failwith "Logic error"
 
             yield! (walkAux child (depth + 1)) |> Seq.map (fun n -> NamedRouteSegment(seg) :: n) 
+        
+        for seg, child in constants do
+          yield! (walkAux child (depth + 1)) |> Seq.map (fun n -> NamedRouteSegment(seg) :: n)
       }
     walkAux routeTree 0
 
@@ -395,51 +404,58 @@ module RouteCompiler =
         | [] ->
           { partIdx = Some(idx); seg = seg; children = [] }
         | children ->
-          let childIfs = children |> List.map (fun c -> route2If c (idx + 1))
+          let childIfs = 
+            children 
+            |> List.map (fun c -> route2If c (idx + 1)) 
+            |> List.rev
           { partIdx = Some(idx); seg = seg; children = childIfs }
       | Endpoint(_) as endpoint ->
         // Don't need to worry about children here, because it isn't possible with the way we group routes
         { partIdx = None; seg = endpoint; children = [] }
 
-  let renderIf (routeIf:RouteIfTest) (options:RouteProviderOptions) (w:ClassWriter) = 
-    let rec renderIfAux (routeIf:RouteIfTest) (precedingSegs:NamedRouteSegment list) (first:bool) (depth:int) =
-      let keyword = if first then "if" else "else if"    
+  type ConditionNode = 
+    { preConditionCheck: string option
+      assignment: string option
+      body: RouteConditionBody }
+  and RouteConditionBody =
+  | Choices of ConditionNode list
+  | Body of string
+
+  let if2Cond (routeIf:RouteIfTest) (options:RouteProviderOptions) : ConditionNode = 
+    let rec renderIfAux (routeIf:RouteIfTest) (precedingSegs:NamedRouteSegment list) (depth:int) =
       match routeIf.seg with
       | NamedRouteSegment(seg) ->
         let idx = routeIf.partIdx.Value
         match seg with 
         | ConstantSeg(name) ->
-          w.StartWrite <| sprintf "%s (parts[start + %d] == \"%s\")" keyword idx name
-          using (w.block()) (fun _ ->
-            routeIf.children |> List.iteri (fun i child ->
-              renderIfAux child (seg :: precedingSegs) (i = 0) (depth + 1)))
+          { preConditionCheck = Some(sprintf "parts[start + %d] == \"%s\"" idx name)
+            assignment = None
+            body = routeIf.children |> List.mapi (fun i child -> 
+              renderIfAux child (seg :: precedingSegs) (depth + 1)) |> Choices }
         | StringSeg(name) ->
-          if first then w.StartWrite("") else w.StartWrite "else"
-          using (w.block()) (fun _ ->
-            w.StartWriteLine <| sprintf "var %s = parts[start + %d];" name idx
-            routeIf.children |> List.iteri (fun i child ->
-              renderIfAux child (seg :: precedingSegs) (i = 0) (depth + 1)))
-        | Int64Seg(name) 
+          { preConditionCheck = None
+            assignment = Some(sprintf "var %s = parts[start + %d];" name idx)
+            body = routeIf.children |> List.mapi (fun i child ->
+              renderIfAux child (seg :: precedingSegs) (depth + 1)) |> Choices }
+        | Int64Seg(name)
         | IntSeg(name) ->
-          let keyword = if first then "if" else "else if"    
-          w.StartWrite <| sprintf "%s (StringIsAllDigits(parts[start + %d]))" keyword idx
-          using (w.block()) (fun _ ->
-            let tname = 
-              match seg with
-              | IntSeg(_) -> "int"
-              | Int64Seg(_) -> "long"
-              | _ -> failwith "Logic error"
-            w.StartWriteLine <| sprintf "var %s = %s.Parse(parts[start + %d]);" name tname idx
-            routeIf.children |> List.iteri (fun i child ->
-              renderIfAux child (seg :: precedingSegs) (i = 0) (depth + 1)))
-        //if depth = 0 then w.StartWriteLine("break;")
+          let tname = 
+            match seg with
+            | IntSeg(_) -> "int"
+            | Int64Seg(_) -> "long"
+            | _ -> failwith "Logic error"
+
+          { preConditionCheck = Some(sprintf "StringIsAllDigits(parts[start + %d])" idx)
+            assignment = Some(sprintf "var %s = %s.Parse(parts[start + %d]);" name tname idx)
+            body = routeIf.children |> List.mapi (fun i child ->
+              renderIfAux child (seg :: precedingSegs) (depth + 1)) |> Choices }
       | Endpoint(endpoint) ->
         let dynArgs = 
           precedingSegs 
           |> List.rev 
           |> List.choose (function
             | Int64Seg(n) | IntSeg(n) | StringSeg(n) -> Some(n) 
-            | _ -> None)
+            | ConstantSeg(_) -> None)
 
         let args = 
           match options.inputTypeName with
@@ -451,16 +467,56 @@ module RouteCompiler =
             sprintf "return this.%s(%s);" (endpoint.handlerName) (args |> String.concat ", ")
           else
             sprintf "this.%s(%s); return;" (endpoint.handlerName) (args |> String.concat ", ")
-      
-        w.StartWriteLine <| sprintf "%s (verb == \"%s\") { %s }" keyword (endpoint.verb) handlerCall
+        { preConditionCheck = Some(sprintf "verb == \"%s\"" (endpoint.verb))
+          assignment = None
+          body = Body(handlerCall) }
+    renderIfAux routeIf [] 0
 
-    renderIfAux routeIf [] true 0
+  let rec renderRouteConds (routeConds: ConditionNode list) (w:ClassWriter) =
+    match routeConds with
+    | [] -> failwith "Logic error"
+    | [cond] ->
+      cond.preConditionCheck |> Option.iter (fun check -> 
+        w.StartWrite <| sprintf "if (%s)" check)
+      let doIndent = bodyIndent cond.body
+      using (w.block(doIndent)) <| fun _ ->
+        cond.assignment |> Option.iter (fun assig -> w.StartWriteLine assig)
+        renderRouteCondsBody (cond.body) w
+    | _ ->
+      routeConds |> List.iteri (fun i cond ->
+        let keyword = 
+          if cond.preConditionCheck.IsSome then
+            if i = 0 then "if" else "else if"
+          else "else"
+
+        w.StartWrite <| keyword + " "
+        cond.preConditionCheck |> Option.iter (fun check ->
+          w.Write <| sprintf "(%s) " check)
+        let doIndent = bodyIndent cond.body
+        using (w.block(doIndent)) <| fun _ ->
+          cond.assignment |> Option.iter (fun s -> w.StartWriteLine s)
+          renderRouteCondsBody (cond.body) w)
+  and bodyIndent body =
+    match body with 
+    | Choices(_) -> true 
+    | Body(_) -> false
+  and renderRouteCondsBody body (w:ClassWriter) =
+    match body with
+    | Choices(choices) ->
+      renderRouteConds choices w 
+    | Body(s) ->
+      let doIndent = bodyIndent body
+      if doIndent then w.StartWriteLine(s) else w.Write(s)
 
   let renderRouteGroupMatchTest (group:RouteTreeFragment list) (options:RouteProviderOptions) (w:ClassWriter) =
-    for route in group do
-      let IF = route2If route 0
-      Debug.Print <| sprintf "GROUP: %A" group
-      renderIf IF options w
+    Debug.Print <| sprintf "Group:\n%A" group
+    let routeConds = 
+      group
+      |> List.map (fun route -> route2If route 0)
+      |> List.map (fun IF -> if2Cond IF options)
+
+    Debug.Print <| sprintf "RouteConds:\n%A" routeConds
+    renderRouteConds routeConds w
 
   let renderDispatchMethod (routeTree:RouteNode) (options:RouteProviderOptions) (w:ClassWriter) =
     let routeGroups = routeTree |> flattenRouteTree |> groupRoutes
@@ -579,13 +635,11 @@ module RouteCompiler =
       let parameters = new System.CodeDom.Compiler.CompilerParameters([|"mscorlib.dll"; "System.Core.dll"; "System.dll"|])
       parameters.TreatWarningsAsErrors <- true
 
-      match options.config with
-      | Some(config) ->
+      options.config |> Option.iter (fun config ->
         for r in config.ReferencedAssemblies do
           if Path.GetFileName(r) <> "RouteProvider.dll" then
             Debug.Print <| sprintf "Added ref \"%s\"" r
-            parameters.ReferencedAssemblies.Add(r) |> ignore
-      | None -> ()
+            parameters.ReferencedAssemblies.Add(r) |> ignore)
 
       parameters.OutputAssembly <- dllFile
       parameters.CompilerOptions <- "/t:library"
