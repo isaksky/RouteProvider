@@ -61,7 +61,13 @@ We can then dispatch routes to this router like this, and the appropriate handle
 *)
 router.DispatchRoute("GET", "projects/4321/comments/1234")
 // "You asked for project 4321 and comment 1234"
+
 (**
+To integrate the router with existing projects, you can specify a fully qualified input and/or output type:
+
+<img src="/RouteProvider/img/input_and_output_types.png">
+
+As you can see above, the dispatch method and handler signatures will then be changed to accept and/or return these types.
 
 Sample projects
 -----------------------
