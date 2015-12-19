@@ -1,6 +1,6 @@
 # RouteProvider
 
-This is an F# Type provider made to generate types suitable for routing in a web application.
+An F# Type provider that generates types suitable for routing in a web application.
 
 ## Example: 
 
