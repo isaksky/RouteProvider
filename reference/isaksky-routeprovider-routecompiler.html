@@ -58,6 +58,12 @@
         </tr>
         <tr>
           <td class="type-name">
+            <a href="isaksky-routeprovider-routecompiler-conditionnode.html">ConditionNode</a>
+          </td>
+          <td class="xmldoc"></td>
+        </tr>
+        <tr>
+          <td class="type-name">
             <a href="isaksky-routeprovider-routecompiler-dynamicparam.html">DynamicParam</a>
           </td>
           <td class="xmldoc"></td>
@@ -101,6 +107,12 @@
         <tr>
           <td class="type-name">
             <a href="isaksky-routeprovider-routecompiler-routebuilder.html">RouteBuilder</a>
+          </td>
+          <td class="xmldoc"></td>
+        </tr>
+        <tr>
+          <td class="type-name">
+            <a href="isaksky-routeprovider-routecompiler-routeconditionbody.html">RouteConditionBody</a>
           </td>
           <td class="xmldoc"></td>
         </tr>
@@ -156,7 +168,7 @@
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L305-305" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L314-314" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -174,7 +186,7 @@
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L248-248" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L257-257" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -192,7 +204,7 @@
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L294-294" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L303-303" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -203,14 +215,14 @@
         <td class="member-name">
 
           <code onmouseout="hideTip(event, '4', 4)" onmouseover="showTip(event, '4', 4)">
-            buildCSharpCode options
+            bodyIndent body
           </code>
           <div class="tip" id="4">
-            <strong>Signature:</strong> options:RouteProviderOptions -&gt; string<br />
+            <strong>Signature:</strong> body:RouteConditionBody -&gt; bool<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L559-559" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L499-499" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -221,14 +233,14 @@
         <td class="member-name">
 
           <code onmouseout="hideTip(event, '5', 5)" onmouseover="showTip(event, '5', 5)">
-            buildNode route segsRemaining depth
+            buildCSharpCode options
           </code>
           <div class="tip" id="5">
-            <strong>Signature:</strong> route:Route -&gt; segsRemaining:NamedRouteSegment list -&gt; depth:int -&gt; RouteNode<br />
+            <strong>Signature:</strong> options:RouteProviderOptions -&gt; string<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L239-239" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L615-615" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -239,14 +251,14 @@
         <td class="member-name">
 
           <code onmouseout="hideTip(event, '6', 6)" onmouseover="showTip(event, '6', 6)">
-            buildRouteTree routes
+            buildNode route segsRemaining depth
           </code>
           <div class="tip" id="6">
-            <strong>Signature:</strong> routes:Route list -&gt; RouteNode<br />
+            <strong>Signature:</strong> route:Route -&gt; segsRemaining:NamedRouteSegment list -&gt; depth:int -&gt; RouteNode<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L272-272" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L248-248" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -257,14 +269,14 @@
         <td class="member-name">
 
           <code onmouseout="hideTip(event, '7', 7)" onmouseover="showTip(event, '7', 7)">
-            compileRoutes options
+            buildRouteTree routes
           </code>
           <div class="tip" id="7">
-            <strong>Signature:</strong> options:RouteProviderOptions -&gt; Type<br />
+            <strong>Signature:</strong> routes:Route list -&gt; RouteNode<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L568-568" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L281-281" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -275,14 +287,14 @@
         <td class="member-name">
 
           <code onmouseout="hideTip(event, '8', 8)" onmouseover="showTip(event, '8', 8)">
-            digitCheckFn 
+            compileRoutes options
           </code>
           <div class="tip" id="8">
-            <strong>Signature:</strong> string<br />
+            <strong>Signature:</strong> options:RouteProviderOptions -&gt; Type<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L508-508" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L624-624" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -293,14 +305,14 @@
         <td class="member-name">
 
           <code onmouseout="hideTip(event, '9', 9)" onmouseover="showTip(event, '9', 9)">
-            dynParamTypeName dynParam
+            digitCheckFn 
           </code>
           <div class="tip" id="9">
-            <strong>Signature:</strong> dynParam:DynamicParam -&gt; string<br />
+            <strong>Signature:</strong> string<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L168-168" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L564-564" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -311,14 +323,14 @@
         <td class="member-name">
 
           <code onmouseout="hideTip(event, '10', 10)" onmouseover="showTip(event, '10', 10)">
-            flattenRouteTree routeTree
+            dynParamTypeName dynParam
           </code>
           <div class="tip" id="10">
-            <strong>Signature:</strong> routeTree:RouteNode -&gt; seq&lt;FlatRouteMember list&gt;<br />
+            <strong>Signature:</strong> dynParam:DynamicParam -&gt; string<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L313-313" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L177-177" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -329,14 +341,14 @@
         <td class="member-name">
 
           <code onmouseout="hideTip(event, '11', 11)" onmouseover="showTip(event, '11', 11)">
-            groupRoutes flatRoutes
+            flattenRouteTree routeTree
           </code>
           <div class="tip" id="11">
-            <strong>Signature:</strong> flatRoutes:seq&lt;FlatRouteMember list&gt; -&gt; (int * RouteTreeFragment list) list<br />
+            <strong>Signature:</strong> routeTree:RouteNode -&gt; seq&lt;FlatRouteMember list&gt;<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L364-364" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L322-322" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -347,9 +359,27 @@
         <td class="member-name">
 
           <code onmouseout="hideTip(event, '12', 12)" onmouseover="showTip(event, '12', 12)">
-            handlerName 
+            groupRoutes flatRoutes
           </code>
           <div class="tip" id="12">
+            <strong>Signature:</strong> flatRoutes:seq&lt;FlatRouteMember list&gt; -&gt; (int * RouteTreeFragment list) list<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L373-373" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '13', 13)" onmouseover="showTip(event, '13', 13)">
+            handlerName 
+          </code>
+          <div class="tip" id="13">
             <strong>Signature:</strong> Route -&gt; string<br />
                       </div>
         </td>
@@ -364,10 +394,28 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '13', 13)" onmouseover="showTip(event, '13', 13)">
+          <code onmouseout="hideTip(event, '14', 14)" onmouseover="showTip(event, '14', 14)">
+            if2Cond routeIf options
+          </code>
+          <div class="tip" id="14">
+            <strong>Signature:</strong> routeIf:RouteIfTest -&gt; options:RouteProviderOptions -&gt; ConditionNode<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L424-424" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '15', 15)" onmouseover="showTip(event, '15', 15)">
             makeCtor routes
           </code>
-          <div class="tip" id="13">
+          <div class="tip" id="15">
             <strong>Signature:</strong> routes:Route list -&gt; HandlerCtorParam list option<br />
                       </div>
         </td>
@@ -382,10 +430,10 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '14', 14)" onmouseover="showTip(event, '14', 14)">
+          <code onmouseout="hideTip(event, '16', 16)" onmouseover="showTip(event, '16', 16)">
             makeHandlerCtorParam route
           </code>
-          <div class="tip" id="14">
+          <div class="tip" id="16">
             <strong>Signature:</strong> route:Route -&gt; HandlerCtorParam<br />
                       </div>
         </td>
@@ -400,10 +448,10 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '15', 15)" onmouseover="showTip(event, '15', 15)">
+          <code onmouseout="hideTip(event, '17', 17)" onmouseover="showTip(event, '17', 17)">
             makeRouteKlasses routes
           </code>
-          <div class="tip" id="15">
+          <div class="tip" id="17">
             <strong>Signature:</strong> routes:Route list -&gt; RouteBuilder list<br />
                       </div>
         </td>
@@ -418,51 +466,15 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '16', 16)" onmouseover="showTip(event, '16', 16)">
+          <code onmouseout="hideTip(event, '18', 18)" onmouseover="showTip(event, '18', 18)">
             notFoundCtorStr options
           </code>
-          <div class="tip" id="16">
+          <div class="tip" id="18">
             <strong>Signature:</strong> options:RouteProviderOptions -&gt; string<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L200-200" class="github-link">
-              <img src="../content/img/github.png" class="normal" />
-              <img src="../content/img/github-blue.png" class="hover" />
-            </a>
-          
-        </td>
-      </tr>
-      <tr>
-        <td class="member-name">
-
-          <code onmouseout="hideTip(event, '17', 17)" onmouseover="showTip(event, '17', 17)">
-            notFoundHandlerParams 
-          </code>
-          <div class="tip" id="17">
-            <strong>Signature:</strong> DynamicParam list<br />
-                      </div>
-        </td>
-        <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L195-195" class="github-link">
-              <img src="../content/img/github.png" class="normal" />
-              <img src="../content/img/github-blue.png" class="hover" />
-            </a>
-          
-        </td>
-      </tr>
-      <tr>
-        <td class="member-name">
-
-          <code onmouseout="hideTip(event, '18', 18)" onmouseover="showTip(event, '18', 18)">
-            paramListTypeString paramList options
-          </code>
-          <div class="tip" id="18">
-            <strong>Signature:</strong> paramList:DynamicParam list -&gt; options:RouteProviderOptions -&gt; string<br />
-                      </div>
-        </td>
-        <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L174-174" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L209-209" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -473,82 +485,10 @@
         <td class="member-name">
 
           <code onmouseout="hideTip(event, '19', 19)" onmouseover="showTip(event, '19', 19)">
-            renderDispatchMethod routeTree options w
+            notFoundHandlerParams 
           </code>
           <div class="tip" id="19">
-            <strong>Signature:</strong> routeTree:RouteNode -&gt; options:RouteProviderOptions -&gt; w:ClassWriter -&gt; unit<br />
-                      </div>
-        </td>
-        <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L465-465" class="github-link">
-              <img src="../content/img/github.png" class="normal" />
-              <img src="../content/img/github-blue.png" class="hover" />
-            </a>
-          
-        </td>
-      </tr>
-      <tr>
-        <td class="member-name">
-
-          <code onmouseout="hideTip(event, '20', 20)" onmouseover="showTip(event, '20', 20)">
-            renderHandlerCtorParamsIvars (...)
-          </code>
-          <div class="tip" id="20">
-            <strong>Signature:</strong> ctorParams:HandlerCtorParam list -&gt; options:RouteProviderOptions -&gt; w:ClassWriter -&gt; unit<br />
-                      </div>
-        </td>
-        <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L222-222" class="github-link">
-              <img src="../content/img/github.png" class="normal" />
-              <img src="../content/img/github-blue.png" class="hover" />
-            </a>
-          
-        </td>
-      </tr>
-      <tr>
-        <td class="member-name">
-
-          <code onmouseout="hideTip(event, '21', 21)" onmouseover="showTip(event, '21', 21)">
-            renderIf routeIf options w
-          </code>
-          <div class="tip" id="21">
-            <strong>Signature:</strong> routeIf:RouteIfTest -&gt; options:RouteProviderOptions -&gt; w:ClassWriter -&gt; unit<br />
-                      </div>
-        </td>
-        <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L404-404" class="github-link">
-              <img src="../content/img/github.png" class="normal" />
-              <img src="../content/img/github-blue.png" class="hover" />
-            </a>
-          
-        </td>
-      </tr>
-      <tr>
-        <td class="member-name">
-
-          <code onmouseout="hideTip(event, '22', 22)" onmouseover="showTip(event, '22', 22)">
-            renderMainClass klass routeTree options
-          </code>
-          <div class="tip" id="22">
-            <strong>Signature:</strong> klass:RouterKlass -&gt; routeTree:RouteNode -&gt; options:RouteProviderOptions -&gt; string<br />
-                      </div>
-        </td>
-        <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L537-537" class="github-link">
-              <img src="../content/img/github.png" class="normal" />
-              <img src="../content/img/github-blue.png" class="hover" />
-            </a>
-          
-        </td>
-      </tr>
-      <tr>
-        <td class="member-name">
-
-          <code onmouseout="hideTip(event, '23', 23)" onmouseover="showTip(event, '23', 23)">
-            renderMainCtor (...)
-          </code>
-          <div class="tip" id="23">
-            <strong>Signature:</strong> klassName:string -&gt; ctorParams:HandlerCtorParam list -&gt; options:RouteProviderOptions -&gt; w:ClassWriter -&gt; unit<br />
+            <strong>Signature:</strong> DynamicParam list<br />
                       </div>
         </td>
         <td class="xmldoc">
@@ -562,15 +502,87 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '24', 24)" onmouseover="showTip(event, '24', 24)">
-            renderMultiLineStr w s
+          <code onmouseout="hideTip(event, '20', 20)" onmouseover="showTip(event, '20', 20)">
+            paramListTypeString paramList options
           </code>
-          <div class="tip" id="24">
-            <strong>Signature:</strong> w:ClassWriter -&gt; s:string -&gt; unit<br />
+          <div class="tip" id="20">
+            <strong>Signature:</strong> paramList:DynamicParam list -&gt; options:RouteProviderOptions -&gt; string<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L526-526" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L183-183" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '21', 21)" onmouseover="showTip(event, '21', 21)">
+            renderDispatchMethod routeTree options w
+          </code>
+          <div class="tip" id="21">
+            <strong>Signature:</strong> routeTree:RouteNode -&gt; options:RouteProviderOptions -&gt; w:ClassWriter -&gt; unit<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L521-521" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '22', 22)" onmouseover="showTip(event, '22', 22)">
+            renderHandlerCtorParamsIvars (...)
+          </code>
+          <div class="tip" id="22">
+            <strong>Signature:</strong> ctorParams:HandlerCtorParam list -&gt; options:RouteProviderOptions -&gt; w:ClassWriter -&gt; unit<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L231-231" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '23', 23)" onmouseover="showTip(event, '23', 23)">
+            renderMainClass klass routeTree options
+          </code>
+          <div class="tip" id="23">
+            <strong>Signature:</strong> klass:RouterKlass -&gt; routeTree:RouteNode -&gt; options:RouteProviderOptions -&gt; string<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L593-593" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '24', 24)" onmouseover="showTip(event, '24', 24)">
+            renderMainCtor (...)
+          </code>
+          <div class="tip" id="24">
+            <strong>Signature:</strong> klassName:string -&gt; ctorParams:HandlerCtorParam list -&gt; options:RouteProviderOptions -&gt; w:ClassWriter -&gt; unit<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L213-213" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -581,14 +593,14 @@
         <td class="member-name">
 
           <code onmouseout="hideTip(event, '25', 25)" onmouseover="showTip(event, '25', 25)">
-            renderRouteBuilder klass w
+            renderMultiLineStr w s
           </code>
           <div class="tip" id="25">
-            <strong>Signature:</strong> klass:RouteBuilder -&gt; w:ClassWriter -&gt; unit<br />
+            <strong>Signature:</strong> w:ClassWriter -&gt; s:string -&gt; unit<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L114-114" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L582-582" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -599,14 +611,14 @@
         <td class="member-name">
 
           <code onmouseout="hideTip(event, '26', 26)" onmouseover="showTip(event, '26', 26)">
-            renderRouteGroupMatchTest (...)
+            renderRouteBuilder klass w
           </code>
           <div class="tip" id="26">
-            <strong>Signature:</strong> group:RouteTreeFragment list -&gt; options:RouteProviderOptions -&gt; w:ClassWriter -&gt; unit<br />
+            <strong>Signature:</strong> klass:RouteBuilder -&gt; w:ClassWriter -&gt; unit<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L459-459" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L123-123" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -617,14 +629,14 @@
         <td class="member-name">
 
           <code onmouseout="hideTip(event, '27', 27)" onmouseover="showTip(event, '27', 27)">
-            renderUtilities w
+            renderRouteConds routeConds w
           </code>
           <div class="tip" id="27">
-            <strong>Signature:</strong> w:ClassWriter -&gt; unit<br />
+            <strong>Signature:</strong> routeConds:ConditionNode list -&gt; w:ClassWriter -&gt; unit<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L533-533" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L475-475" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -635,14 +647,14 @@
         <td class="member-name">
 
           <code onmouseout="hideTip(event, '28', 28)" onmouseover="showTip(event, '28', 28)">
-            route2If route idx
+            renderRouteCondsBody body w
           </code>
           <div class="tip" id="28">
-            <strong>Signature:</strong> route:RouteTreeFragment -&gt; idx:int -&gt; RouteIfTest<br />
+            <strong>Signature:</strong> body:RouteConditionBody -&gt; w:ClassWriter -&gt; unit<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L391-391" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L503-503" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -653,9 +665,63 @@
         <td class="member-name">
 
           <code onmouseout="hideTip(event, '29', 29)" onmouseover="showTip(event, '29', 29)">
-            routeIVars route
+            renderRouteGroupMatchTest (...)
           </code>
           <div class="tip" id="29">
+            <strong>Signature:</strong> group:RouteTreeFragment list -&gt; options:RouteProviderOptions -&gt; w:ClassWriter -&gt; unit<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L511-511" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '30', 30)" onmouseover="showTip(event, '30', 30)">
+            renderUtilities w
+          </code>
+          <div class="tip" id="30">
+            <strong>Signature:</strong> w:ClassWriter -&gt; unit<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L589-589" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '31', 31)" onmouseover="showTip(event, '31', 31)">
+            route2If route idx
+          </code>
+          <div class="tip" id="31">
+            <strong>Signature:</strong> route:RouteTreeFragment -&gt; idx:int -&gt; RouteIfTest<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L400-400" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '32', 32)" onmouseover="showTip(event, '32', 32)">
+            routeIVars route
+          </code>
+          <div class="tip" id="32">
             <strong>Signature:</strong> route:Route -&gt; FunctionParam list<br />
                       </div>
         </td>
@@ -670,10 +736,10 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '30', 30)" onmouseover="showTip(event, '30', 30)">
+          <code onmouseout="hideTip(event, '33', 33)" onmouseover="showTip(event, '33', 33)">
             routeName route
           </code>
-          <div class="tip" id="30">
+          <div class="tip" id="33">
             <strong>Signature:</strong> route:Route -&gt; string<br />
                       </div>
         </td>
@@ -688,15 +754,15 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '31', 31)" onmouseover="showTip(event, '31', 31)">
+          <code onmouseout="hideTip(event, '34', 34)" onmouseover="showTip(event, '34', 34)">
             routeNotMatchedEx 
           </code>
-          <div class="tip" id="31">
+          <div class="tip" id="34">
             <strong>Signature:</strong> string<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L516-516" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouteCompiler.fs#L572-572" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -706,10 +772,10 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '32', 32)" onmouseover="showTip(event, '32', 32)">
+          <code onmouseout="hideTip(event, '35', 35)" onmouseover="showTip(event, '35', 35)">
             routes2Class routes options
           </code>
-          <div class="tip" id="32">
+          <div class="tip" id="35">
             <strong>Signature:</strong> routes:Route list -&gt; options:RouteProviderOptions -&gt; RouterKlass<br />
                       </div>
         </td>
@@ -724,10 +790,10 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '33', 33)" onmouseover="showTip(event, '33', 33)">
+          <code onmouseout="hideTip(event, '36', 36)" onmouseover="showTip(event, '36', 36)">
             routeSubClass route
           </code>
-          <div class="tip" id="33">
+          <div class="tip" id="36">
             <strong>Signature:</strong> route:Route -&gt; RouteBuilder<br />
                       </div>
         </td>
