@@ -143,8 +143,6 @@
 <span class="l"> 98: </span>
 <span class="l"> 99: </span>
 <span class="l">100: </span>
-<span class="l">101: </span>
-<span class="l">102: </span>
 </pre></td>
 <td class="snippet"><pre class="fssnip highlighted"><code lang="csharp"><span class="k">using</span> System;
 <span class="k">namespace</span> IsakSky {
@@ -195,33 +193,31 @@
       <span class="k">switch</span> (parts.Length <span class="o">-</span> start <span class="o">-</span> endOffset) {
         <span class="k">case</span> 2:
           <span class="k">if</span> (parts[start <span class="o">+</span> 0] <span class="o">=</span><span class="o">=</span> <span class="s">"people"</span>) {
-{
-              <span class="k">var</span> name <span class="o">=</span> parts[start <span class="o">+</span> 1];
-              <span class="k">if</span> (verb <span class="o">=</span><span class="o">=</span> <span class="s">"GET"</span>){ <span class="k">this</span>.getPerson(name); <span class="k">return</span>; }
-            }
+            <span class="k">var</span> name <span class="o">=</span> parts[start <span class="o">+</span> 1];
+            <span class="k">if</span> (verb <span class="o">=</span><span class="o">=</span> <span class="s">"GET"</span>) { <span class="k">this</span>.getPerson(name); <span class="k">return</span>; }
           }
           <span class="k">else</span> <span class="k">if</span> (parts[start <span class="o">+</span> 0] <span class="o">=</span><span class="o">=</span> <span class="s">"projects"</span>) {
             <span class="k">if</span> (parts[start <span class="o">+</span> 1] <span class="o">=</span><span class="o">=</span> <span class="s">"statistics"</span>) {
-              <span class="k">if</span> (verb <span class="o">=</span><span class="o">=</span> <span class="s">"GET"</span>){ <span class="k">this</span>.GET__projects_statistics(); <span class="k">return</span>; }
+              <span class="k">if</span> (verb <span class="o">=</span><span class="o">=</span> <span class="s">"GET"</span>) { <span class="k">this</span>.GET__projects_statistics(); <span class="k">return</span>; }
             }
             <span class="k">else</span> <span class="k">if</span> (StringIsAllDigits(parts[start <span class="o">+</span> 1])) {
               <span class="k">var</span> projectId <span class="o">=</span> <span class="k">int</span>.Parse(parts[start <span class="o">+</span> 1]);
-              <span class="k">if</span> (verb <span class="o">=</span><span class="o">=</span> <span class="s">"PUT"</span>){ <span class="k">this</span>.updateProject(projectId); <span class="k">return</span>; }
+              <span class="k">if</span> (verb <span class="o">=</span><span class="o">=</span> <span class="s">"PUT"</span>) { <span class="k">this</span>.updateProject(projectId); <span class="k">return</span>; }
             }
             <span class="k">else</span> <span class="k">if</span> (StringIsAllDigits(parts[start <span class="o">+</span> 1])) {
               <span class="k">var</span> projectId <span class="o">=</span> <span class="k">long</span>.Parse(parts[start <span class="o">+</span> 1]);
-              <span class="k">if</span> (verb <span class="o">=</span><span class="o">=</span> <span class="s">"GET"</span>){ <span class="k">this</span>.getProject(projectId); <span class="k">return</span>; }
+              <span class="k">if</span> (verb <span class="o">=</span><span class="o">=</span> <span class="s">"GET"</span>) { <span class="k">this</span>.getProject(projectId); <span class="k">return</span>; }
             }
           }
           <span class="k">break</span>;
         <span class="k">case</span> 4:
-          <span class="k">if</span> (parts[start <span class="o">+</span> 0] <span class="o">=</span><span class="o">=</span> <span class="s">"projects"</span>){
-            <span class="k">if</span> (StringIsAllDigits(parts[start <span class="o">+</span> 1])){
+          <span class="k">if</span> (parts[start <span class="o">+</span> 0] <span class="o">=</span><span class="o">=</span> <span class="s">"projects"</span>) {
+            <span class="k">if</span> (StringIsAllDigits(parts[start <span class="o">+</span> 1])) {
               <span class="k">var</span> projectId <span class="o">=</span> <span class="k">long</span>.Parse(parts[start <span class="o">+</span> 1]);
-              <span class="k">if</span> (parts[start <span class="o">+</span> 2] <span class="o">=</span><span class="o">=</span> <span class="s">"comments"</span>){
-                <span class="k">if</span> (StringIsAllDigits(parts[start <span class="o">+</span> 3])){
+              <span class="k">if</span> (parts[start <span class="o">+</span> 2] <span class="o">=</span><span class="o">=</span> <span class="s">"comments"</span>) {
+                <span class="k">if</span> (StringIsAllDigits(parts[start <span class="o">+</span> 3])) {
                   <span class="k">var</span> commentId <span class="o">=</span> <span class="k">long</span>.Parse(parts[start <span class="o">+</span> 3]);
-                  <span class="k">if</span> (verb <span class="o">=</span><span class="o">=</span> <span class="s">"GET"</span>){ <span class="k">this</span>.getProjectComments(projectId, commentId); <span class="k">return</span>; }
+                  <span class="k">if</span> (verb <span class="o">=</span><span class="o">=</span> <span class="s">"GET"</span>) { <span class="k">this</span>.getProjectComments(projectId, commentId); <span class="k">return</span>; }
                 }
               }
             }
