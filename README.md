@@ -19,7 +19,7 @@ type MyRoutes = IsakSky.RouteProvider<routes>
 let router = MyRoutes(
               getProject = (fun projectId -> printfn "You asked for project %d" projectId),
               getProjectComments = (fun projectId commentId ->
-                                                                    printfn "You asked for project %d and comment %d" projectId commentId),
+                printfn "You asked for project %d and comment %d" projectId commentId),
               updateProject = (fun p -> printfn "Updated project %d" p),
               // If you don't provide a route name, one will be computed for you
               GET__projects_statistics = (fun () -> printfn "You asked for project statistics"),
