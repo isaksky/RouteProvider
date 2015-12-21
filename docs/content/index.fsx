@@ -72,9 +72,11 @@ Sample projects
 -----------------------
  * [Simple](https://github.com/isaksky/RouteProvider/blob/master/src/RouteProvider.Samples/Simple/Simple/Simple.fsx) A basic command line example
 
- * [Web app - Owin Input type](https://github.com/isaksky/RouteProvider/blob/master/src/RouteProvider.Samples/SampleWithOwin/SampleWithOwin/Program.fs) A basic web app with a few routes, using an Owin input type
+ * [Owin Input type](https://github.com/isaksky/RouteProvider/blob/master/src/RouteProvider.Samples/SampleWithOwin/SampleWithOwin/Program.fs) A basic web app with a few routes, using an Owin input type
 
- * [Web app - System Web](https://github.com/isaksky/RouteProvider/blob/master/src/RouteProvider.Samples/SystemWebReturnType/SystemWebReturnType/Program.fs) A basic web app, specifying a HttpListenerContext as an input type, and a string as a return type
+ * [ASP.Net MVC](https://github.com/isaksky/RouteProvider/blob/master/src/RouteProvider.Samples/MVC/Global.asax.fs) Taking over routing for ASP.NET MVC
+
+ * [System Web](https://github.com/isaksky/RouteProvider/blob/master/src/RouteProvider.Samples/SystemWebReturnType/SystemWebReturnType/Program.fs) A basic web app, specifying a HttpListenerContext as an input type, and a string as a return type
 
  * [API Reference](reference/index.html) automatically generated documentation for all types
 
