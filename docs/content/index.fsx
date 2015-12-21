@@ -6,8 +6,7 @@
 (**
 RouteProvider
 ======================
-
-Documentation
+RouteProvider is an F# Type provider that generates types suitable for routing in a web application.
 
 <div class="row">
   <div class="span1"></div>
