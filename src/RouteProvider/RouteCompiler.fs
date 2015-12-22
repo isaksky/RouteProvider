@@ -639,11 +639,12 @@ module RouteCompiler =
       let parameters = new System.CodeDom.Compiler.CompilerParameters([|"mscorlib.dll"; "System.Core.dll"; "System.dll"|])
       parameters.TreatWarningsAsErrors <- true
 
-      options.config |> Option.iter (fun config ->
-        for r in config.ReferencedAssemblies do
-          if Path.GetFileName(r) <> "RouteProvider.dll" then
-            Debug.Print <| sprintf "Added ref \"%s\"" r
-            parameters.ReferencedAssemblies.Add(r) |> ignore)
+      if options.inputTypeName.IsSome || options.returnTypeName.IsSome then
+        options.config |> Option.iter (fun config ->
+          for r in config.ReferencedAssemblies do
+            if Path.GetFileName(r) <> "RouteProvider.dll" then
+              Debug.Print <| sprintf "Added ref \"%s\"" r
+              parameters.ReferencedAssemblies.Add(r) |> ignore)
 
       parameters.OutputAssembly <- dllFile
       parameters.CompilerOptions <- "/t:library"
