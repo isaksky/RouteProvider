@@ -1,6 +1,6 @@
 source https://nuget.org/api/v2
 
-nuget FParsec
+nuget FParsec 1.0.2
 nuget FSharp.Formatting
 nuget FAKE
 nuget nunit 3.0.0
