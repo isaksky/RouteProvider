@@ -430,12 +430,12 @@ module RouteCompiler =
         | ConstantSeg(name) ->
           { preConditionCheck = Some(sprintf "parts[start + %d] == \"%s\"" idx name)
             assignment = None
-            body = routeIf.children |> List.mapi (fun i child -> 
+            body = routeIf.children |> List.map (fun child -> 
               renderIfAux child (seg :: precedingSegs) (depth + 1)) |> Choices }
         | StringSeg(name) ->
           { preConditionCheck = None
             assignment = Some(sprintf "var %s = parts[start + %d];" name idx)
-            body = routeIf.children |> List.mapi (fun i child ->
+            body = routeIf.children |> List.map (fun child ->
               renderIfAux child (seg :: precedingSegs) (depth + 1)) |> Choices }
         | Int64Seg(name)
         | IntSeg(name) ->
@@ -447,7 +447,7 @@ module RouteCompiler =
 
           { preConditionCheck = Some(sprintf "StringIsAllDigits(parts[start + %d])" idx)
             assignment = Some(sprintf "var %s = %s.Parse(parts[start + %d]);" name tname idx)
-            body = routeIf.children |> List.mapi (fun i child ->
+            body = routeIf.children |> List.map (fun child ->
               renderIfAux child (seg :: precedingSegs) (depth + 1)) |> Choices }
       | Endpoint(endpoint) ->
         let dynArgs = 
