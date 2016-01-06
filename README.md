@@ -54,7 +54,7 @@ Example with both input and return types specified:
 
 https://www.youtube.com/watch?v=r7cdeTzPY58
 
-## Todo
+## Roadmap / planned features
 - Allow routes to be defined in a seperate file
 
 ## Comparison with other approaches
@@ -68,6 +68,12 @@ https://www.youtube.com/watch?v=r7cdeTzPY58
 | Ruby on Rails   | Internal Ruby DSL                                      | Yes            | None          |
 | Yesod (Haskell) | Types generated from Route DSL via Template Haskell    | Yes            | Full          |
 | RouteProvider   | Types generated from Route DSL via #F Type Provider    | Yes            | Full          |
+
+## Installation
+
+You can install it via Nuget:
+
+```Install-Package RouteProvider -Pre```
 
 ## How does it work?
 
