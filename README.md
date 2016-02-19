@@ -56,7 +56,7 @@ https://www.youtube.com/watch?v=r7cdeTzPY58
 
 ## Roadmap / planned features
 - Switch from code generation to code injection (idea from @pezi_pink)
--- This will enable generics (removing a lot of complexity), and allow it the router to work with just about anything, including Suave!
+  - This will enable generics (removing a lot of complexity), and allow it the router to work with just about anything, including Suave!
 
 ## Comparison with other approaches
 
