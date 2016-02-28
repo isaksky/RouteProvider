@@ -5,6 +5,18 @@ open System.Reflection
 open System.IO
 open System.Collections.Generic
 open Microsoft.FSharp.Core.CompilerServices
+open System.Runtime.InteropServices
+open System.Collections.Generic
+open System.Collections.Concurrent
+open System.Runtime.Serialization
+open System.Diagnostics.Tracing
+open System.Diagnostics
+open System.Text
+open System.Reflection
+
+open Utility
+
+open RouteCompilation
 
 type RouteProvider() = inherit obj()
 
@@ -12,9 +24,12 @@ type RouteProvider() = inherit obj()
 type RouteProviderCore(cfg: TypeProviderConfig) =
   let cfg = cfg
   let namespaceName = "IsakSky"
-  let invalidation = new Event<_,_>()
+  let invalidation = new Event<EventHandler,EventArgs>()
   let mutable _assemblyResolver : ResolveEventHandler = null
-
+  static let _asmBytesCache = BoundedCache<string, byte[]>(10)
+  static let _parserResultsCache = BoundedCache<_,_>(30)
+  static let _emmiters = System.Collections.Concurrent.ConcurrentDictionary<string, RouterEmitter>()
+  
   do
     _assemblyResolver <- ResolveEventHandler(fun _ args ->
           let expectedName = (AssemblyName(args.Name)).Name + ".dll"
@@ -24,7 +39,7 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
           match asmPath with
           | Some f -> Assembly.LoadFrom f
           | None -> null)
-    System.AppDomain.CurrentDomain.add_AssemblyResolve(_assemblyResolver)
+    AppDomain.CurrentDomain.add_AssemblyResolve(_assemblyResolver)
 
   let staticParams = [|
     { new ParameterInfo() with
@@ -34,28 +49,59 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
         override this.Attributes with get() = ParameterAttributes.None
     }
     { new ParameterInfo() with
-        override this.Name with get() = "inputTypeName"
+        override this.Name with get() = "inputType"
         override this.Position with get() = 1
-        override this.ParameterType with get() = typeof<string>
+        override this.ParameterType with get() = typeof<bool>
         override this.Attributes with get() = ParameterAttributes.Optional
-        override this.RawDefaultValue with get() = "" :> obj
-        override this.DefaultValue with get() = "" :> obj
+        override this.RawDefaultValue with get() = false :> obj
+        override this.DefaultValue with get() = false :> obj
     }
     { new ParameterInfo() with
-        override this.Name with get() = "returnTypeName"
+        override this.Name with get() = "returnType"
         override this.Position with get() = 2
+        override this.ParameterType with get() = typeof<bool>
+        override this.Attributes with get() = ParameterAttributes.Optional
+        override this.RawDefaultValue with get() = false :> obj
+        override this.DefaultValue with get() = false :> obj
+    }
+    { new ParameterInfo() with
+        override this.Name with get() = "outputPath"
+        override this.Position with get() = 3
         override this.ParameterType with get() = typeof<string>
         override this.Attributes with get() = ParameterAttributes.Optional
         override this.RawDefaultValue with get() = "" :> obj
         override this.DefaultValue with get() = "" :> obj
-    }
-  |]  
-  //member this.ResolveAssembly(args) =
+    }    
+  |]
+
+  static member GetOrCreateFakeAsm(typeName, tpTmpDir) =
+    match _asmBytesCache.TryGet(typeName) with
+    | Some(bytes) ->
+      let asm = Assembly.Load(bytes)
+      asm.GetType <| "IsakSky." + typeName
+    | None ->
+      let code = sprintf "namespace IsakSky { public class %s { public const bool Dummy = true; } }" typeName
+      let dllFile = getTmpFileName tpTmpDir "dll"
+      let compilerArgs =  dict [("CompilerVersion", "v4.0")]
+      let compiler = new Microsoft.CSharp.CSharpCodeProvider(compilerArgs)
+      let parameters = new System.CodeDom.Compiler.CompilerParameters([|"System.dll"|])
+      // TODO - see if we can get compilation in memory to work
+      parameters.OutputAssembly <- dllFile
+      parameters.CompilerOptions <- "/t:library"
+      let compilerResults = compiler.CompileAssemblyFromSource(parameters, [| code |])
+      if compilerResults.Errors.HasErrors then
+        let errors = seq { for err in compilerResults.Errors do yield err }
+        failwithf "Got error: %A" (errors |> Seq.head)
+      else
+        let bytes = File.ReadAllBytes(dllFile)
+        _asmBytesCache.Add(typeName, bytes)
+        let asm = Assembly.Load(bytes)
+        asm.GetType <| "IsakSky." + typeName
 
   interface ITypeProvider with
       [<CLIEvent>]
       member this.Invalidate =
-          invalidation.Publish
+        invalidation.Publish
       member this.GetNamespaces() =
           [| this |]
       member this.GetStaticParameters(typeWithoutArguments) =
@@ -63,47 +109,88 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
           staticParams
         else 
           [| |]
-      member this.ApplyStaticArguments(typeWithoutArguments, typeNameWithArguments, staticArguments) =
+      member this.ApplyStaticArguments(_ (*typeWithoutArguments *), typeNameWithArguments, staticArguments) =
+        log "Apply static params!"
         let typeName = typeNameWithArguments.[typeNameWithArguments.Length - 1]
 
-        let compilerArgs = 
+        let routesStr, inputType, returnType, outputPath  = 
           match staticArguments with
-          | [|:? string as routeStr; :? string as inputTypeName; :? string as returnTypeName|] ->
-            { RouteCompiler.RouteProviderOptions.routesStr = routeStr
-              RouteCompiler.RouteProviderOptions.typeName = typeName
-              RouteCompiler.RouteProviderOptions.inputTypeName = if inputTypeName = "" then None else Some(inputTypeName) 
-              RouteCompiler.RouteProviderOptions.returnTypeName = if returnTypeName = "" then None else Some(returnTypeName) 
-              RouteCompiler.RouteProviderOptions.config = Some cfg}
+          | [|:? string as routesStr 
+              :? bool as inputType
+              :? bool as returnType
+              :? string as outputPath|] ->
+              routesStr, inputType, returnType, outputPath
           | _ ->
             failwithf "Bad params: %A" staticArguments
-        RouteCompiler.compileRoutes compilerArgs
+
+        let parseResult = 
+          match _parserResultsCache.TryGet routesStr with 
+          | Some(p) -> p
+          | None ->
+            let parse = RouteParsing.parseRoutes routesStr
+            _parserResultsCache.Add((routesStr), parse)
+            parse
+
+        let resolvedOutputPath = resolvePath outputPath (cfg.ResolutionFolder)
+        
+        match parseResult with
+        | RouteParsing.RouteParseResult.Failure(msg) -> 
+          failwithf "%s" msg
+        | RouteParsing.RouteParseResult.Success(routes) ->
+          let em = 
+            _emmiters.GetOrAdd(resolvedOutputPath, fun resolvedOutputPath ->
+              let threadName = Threading.Thread.CurrentThread.ManagedThreadId                
+              log "[RouteProvider]: Thread %d, Instance %A creating a RouterEmitter for %s" threadName (ObjectUtilities.GetInstanceId(this)) resolvedOutputPath
+              let em = RouterEmitter(resolvedOutputPath)
+              let listenerRef : IDisposable ref = ref null
+              let listener = em.Expired.Subscribe(fun _ -> 
+                _emmiters.TryRemove(resolvedOutputPath) |> ignore
+                log "[RouteProvider]: Thread %d, Instance %A shutting down RouterEmitter for %s" threadName (ObjectUtilities.GetInstanceId(this)) resolvedOutputPath
+                (!listenerRef).Dispose())                           
+              listenerRef := listener
+              em
+            )
+
+          let routeEmitArgs = 
+            { typeName = typeName
+              parse = routes
+              outputPath = outputPath
+              inputType = inputType
+              returnType = returnType
+              nameSpace = None
+              moduleName = None }
+
+          let res = em.PostMessage(routeEmitArgs)
+          log "Reply from emitter: %A" res            
+
+          match res with
+          | IgnoredStale -> RouteProviderCore.GetOrCreateFakeAsm(typeName, cfg.TemporaryFolder)
+          | IgnoredBadExtension -> failwith "Bad output file extension. Only *.fs, *.cs, and *.dll supported"
+          | Ok | OkSecondaryThread -> RouteProviderCore.GetOrCreateFakeAsm(typeName, cfg.TemporaryFolder)
       member this.GetInvokerExpression(syntheticMethodBase, parameters) =
           match syntheticMethodBase with
           | :? ConstructorInfo as ctor ->
               Quotations.Expr.NewObject(ctor, Array.toList parameters) 
           | :? MethodInfo as mi ->
-            if mi.IsStatic then
-              Quotations.Expr.Call(mi, Array.toList parameters)
-            else 
-                Quotations.Expr.Call(parameters.[0], mi, Array.toList parameters.[1..])
+            if mi.IsStatic then Quotations.Expr.Call(mi, Array.toList parameters)
+            else Quotations.Expr.Call(parameters.[0], mi, Array.toList parameters.[1..])
           | _ ->
-              NotImplementedException(sprintf "Not Implemented: ITypeProvider.GetInvokerExpression(%A, %A)" syntheticMethodBase parameters) |> raise
+            let exStr = sprintf "Not Implemented: ITypeProvider.GetInvokerExpression(%A, %A)" syntheticMethodBase parameters
+            raise <| NotImplementedException(exStr) 
       member this.GetGeneratedAssemblyContents(assembly) =
-          IO.File.ReadAllBytes assembly.ManifestModule.FullyQualifiedName
+        assembly.GetTypes()
+        |> Array.tryPick (fun typ -> _asmBytesCache.TryGet (typ.Name))
+        |> Option.get
       member this.Dispose() =
-        System.AppDomain.CurrentDomain.remove_AssemblyResolve(_assemblyResolver)
+        log "this.Dispose()!"
+        AppDomain.CurrentDomain.remove_AssemblyResolve(_assemblyResolver)
 
   interface IProvidedNamespace with
-      member this.ResolveTypeName(typeName) =
-          typeof<RouteProvider>
+      member this.ResolveTypeName(_) = typeof<RouteProvider>
       member this.NamespaceName
-          with get() =
-              namespaceName
-      member this.GetNestedNamespaces() =
-          [| |]
-      member this.GetTypes() =
-          [| typeof<RouteProvider> |]
+          with get() = namespaceName
+      member this.GetNestedNamespaces() = [| |]
+      member this.GetTypes() = [| typeof<RouteProvider> |]
 
 [<assembly: TypeProviderAssembly>]
 do ()
-

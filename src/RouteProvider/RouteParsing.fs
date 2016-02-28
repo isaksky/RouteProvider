@@ -48,5 +48,14 @@ module RouteParsing =
 
   let pRoutes : Parser<_, unit> = spaces >>. sepEndBy1 pRoute spaces .>> eof
 
-  let inline testP p s =
+  let inline private testP p s =
     runParserOnString  p () "Test" s
+
+  type RouteParseResult = Success of Route list | Failure of string
+
+  let parseRoutes routesStr =
+    match runParserOnString pRoutes () "User routes" routesStr with
+    | ParserResult.Success(routes,_, _) ->
+      Success(routes)
+    | ParserResult.Failure (msg,_,_) ->
+      Failure(msg)      

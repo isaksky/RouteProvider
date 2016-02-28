@@ -7,14 +7,17 @@ open Microsoft.FSharp.Collections
 open System.Collections.Generic
 open System.Diagnostics
 open System.IO
+open Microsoft.FSharp.Compiler.SimpleSourceCodeServices
 
-module RouteCompiler =
-  type RouteProviderOptions =
+module RouteCompilation =
+  type RouteCompilationArgs =
      { typeName: string
-       routesStr: string
-       inputTypeName: string option
-       returnTypeName: string option
-       config: TypeProviderConfig option }
+       parse: Route list
+       inputType: bool
+       returnType: bool
+       outputType: CompilationOutputType }
+  and CompilationOutputType =
+  | CSharp
 
   type RouterKlass = 
     { name: string
@@ -79,7 +82,7 @@ module RouteCompiler =
   let makeCtor (routes:Route list) = 
     Some((routes |> List.map makeHandlerCtorParam))
 
-  let routes2Class (routes:Route list) (options: RouteProviderOptions) =
+  let routes2Class (routes:Route list) (options: RouteCompilationArgs) =
     { name = options.typeName
       ctor = (makeCtor routes)
       routeKlasses = (makeRouteKlasses routes)
@@ -180,21 +183,19 @@ module RouteCompiler =
     | IntParam(_) -> "int"
     | StringParam(_) -> "string"
 
-  let paramListTypeString (paramList: DynamicParam list) (options:RouteProviderOptions) =
+  let paramListTypeString (paramList: DynamicParam list) (options:RouteCompilationArgs) =
     let genericTypes = paramList |> List.map dynParamTypeName
-    let ftype = if options.returnTypeName.IsSome then "Func" else "Action"
+    let ftype = if options.returnType then "Func" else "Action"
 
     let types' = 
-      match options.inputTypeName with
-      | Some(inputTypeName) ->
-        inputTypeName :: genericTypes
-      | None -> genericTypes
+      if options.inputType then
+        "TContext" :: genericTypes
+      else genericTypes
 
     let types =
-      match options.returnTypeName with
-      | Some(returnTypeName) ->
-        types' @ [returnTypeName]
-      | None -> types'
+      if options.returnType then
+        types' @ ["TReturn"]
+      else  types'
 
     if types.Length > 0 then
       sprintf "%s<%s>" ftype (String.concat ", " types)
@@ -206,11 +207,11 @@ module RouteCompiler =
     StringParam("Path")
   ]
 
-  let notFoundCtorStr (options:RouteProviderOptions) =
+  let notFoundCtorStr (options:RouteCompilationArgs) =
     let typeStr = paramListTypeString notFoundHandlerParams options
     sprintf "%s notFound" typeStr
 
-  let renderMainCtor (klassName:string) (ctorParams:HandlerCtorParam list) (options:RouteProviderOptions) (w:ClassWriter) =
+  let renderMainCtor (klassName:string) (ctorParams:HandlerCtorParam list) (options:RouteCompilationArgs) (w:ClassWriter) =
     w.StartWriteLine <| sprintf "public %s(" klassName
 
     using (w.indent()) <| fun _ ->
@@ -228,7 +229,7 @@ module RouteCompiler =
             w.StartWriteLine <| sprintf "this.%s = %s;" (ctorParam.name) (ctorParam.name)
           w.StartWriteLine <| sprintf "this.notFound = notFound;"
 
-  let renderHandlerCtorParamsIvars (ctorParams:HandlerCtorParam list) (options:RouteProviderOptions) (w:ClassWriter) =
+  let renderHandlerCtorParamsIvars (ctorParams:HandlerCtorParam list) (options:RouteCompilationArgs) (w:ClassWriter) =
     for ctorParam in ctorParams do
       let pms = ctorParam.handlerArgs |> List.map (function | FunctionParam(p) -> p)
       w.StartWriteLine <| (sprintf "public readonly %s %s;" (paramListTypeString pms options) (ctorParam.name))
@@ -421,7 +422,7 @@ module RouteCompiler =
   | Choices of ConditionNode list
   | Body of string
 
-  let if2Cond (routeIf:RouteIfTest) (options:RouteProviderOptions) : ConditionNode = 
+  let if2Cond (routeIf:RouteIfTest) (options:RouteCompilationArgs) : ConditionNode = 
     let rec renderIfAux (routeIf:RouteIfTest) (precedingSegs:NamedRouteSegment list) (depth:int) =
       match routeIf.seg with
       | NamedRouteSegment(seg) ->
@@ -458,12 +459,11 @@ module RouteCompiler =
             | ConstantSeg(_) -> None)
 
         let args = 
-          match options.inputTypeName with
-          | Some(_) -> "context" :: dynArgs
-          | None -> dynArgs
+          if options.inputType then "context" :: dynArgs
+          else dynArgs
 
         let handlerCall =
-          if options.returnTypeName.IsSome then
+          if options.returnType then
             sprintf "return this.%s(%s);" (endpoint.handlerName) (args |> String.concat ", ")
           else
             sprintf "this.%s(%s); return;" (endpoint.handlerName) (args |> String.concat ", ")
@@ -512,7 +512,7 @@ module RouteCompiler =
       let doIndent = bodyIndent body
       if doIndent then w.StartWriteLine(s) else w.Write(s)
 
-  let renderRouteGroupMatchTest (group:RouteTreeFragment list) (options:RouteProviderOptions) (w:ClassWriter) =
+  let renderRouteGroupMatchTest (group:RouteTreeFragment list) (options:RouteCompilationArgs) (w:ClassWriter) =
     Debug.Print <| sprintf "Group:\n%A" group
     let routeConds = 
       group
@@ -522,7 +522,7 @@ module RouteCompiler =
     Debug.Print <| sprintf "RouteConds:\n%A" routeConds
     renderRouteConds routeConds w
 
-  let renderDispatchMethod (routeTree:RouteNode) (options:RouteProviderOptions) (w:ClassWriter) =
+  let renderDispatchMethod (routeTree:RouteNode) (options:RouteCompilationArgs) (w:ClassWriter) =
     let routeGroups = routeTree |> flattenRouteTree |> groupRoutes
 
     let baseArgs = [
@@ -531,15 +531,12 @@ module RouteCompiler =
     ]
 
     let args = 
-      match options.inputTypeName with
-      | Some(inputTypeName) ->
-        sprintf "%s context" inputTypeName :: baseArgs
-      | None -> baseArgs
+      if options.inputType then "TContext context" :: baseArgs
+      else baseArgs
 
     let retTp =
-      match options.returnTypeName with
-      | Some(routeTypeName) -> routeTypeName
-      | None -> "void"
+      if options.returnType then "TReturn"
+      else "void"
     
     let argsStr = args |> String.concat ", "
     w.StartWrite <| sprintf "public %s DispatchRoute(%s) " retTp argsStr
@@ -560,9 +557,9 @@ module RouteCompiler =
       w.StartWriteLine <| "if (this.notFound == null) { throw new RouteNotMatchedException(verb, path); }"
 
       let notFoundArgs' = ["verb"; "path"]
-      let notFoundArgs = if options.inputTypeName.IsSome then "context" :: notFoundArgs' else notFoundArgs'
+      let notFoundArgs = if options.inputType then "context" :: notFoundArgs' else notFoundArgs'
       let notFoundArgsStr = notFoundArgs |> String.concat ", "
-      let retStr = if options.returnTypeName.IsSome then "return " else ""
+      let retStr = if options.returnType then "return " else ""
       w.StartWriteLine <| sprintf "else { %sthis.notFound(%s); }" retStr notFoundArgsStr)
 
   let digitCheckFn = """
@@ -594,12 +591,18 @@ module RouteCompiler =
     renderMultiLineStr w digitCheckFn
     renderMultiLineStr w routeNotMatchedEx
 
-  let renderMainClass (klass:RouterKlass) (routeTree:RouteNode) (options:RouteProviderOptions) =
+  let renderMainClass (klass:RouterKlass) (routeTree:RouteNode) (options:RouteCompilationArgs) =
     let w = new ClassWriter()
     w.StartWriteLine "using System;"
     w.StartWrite "namespace IsakSky "
     using (w.block()) <| fun _ ->
-      w.StartWrite <| sprintf "public class %s " (klass.name)
+      let typeArgStr =
+        match options.inputType, options.returnType with
+        | true, true -> "<TContext, TReturn>"
+        | true, false -> "<TContext>"
+        | false, true -> "<TReturn>"
+        | false, false -> ""
+      w.StartWrite <| sprintf "public class %s%s " (klass.name) typeArgStr
       using (w.block()) <| fun _ ->
         w.StartWrite "public static class Builders"
         using (w.block()) <| fun _ -> 
@@ -616,44 +619,51 @@ module RouteCompiler =
         renderUtilities w
     w.content.ToString()
 
-  let buildCSharpCode (options:RouteProviderOptions) =
-    match runParserOnString RouteParsing.pRoutes () "User routes" (options.routesStr) with
-    | Success(routes,_, _) ->
-      let klass = routes2Class routes options
-      let routeTree = buildRouteTree routes
-      renderMainClass klass routeTree options
-    | Failure (msg,_,_) ->
-      failwithf "Failed to parse routes. Error: %s" msg
+//  let buildCSharpCode (options:RouteProviderOptions) =
+//    match runParserOnString RouteParsing.pRoutes () "User routes" (options.routesStr) with
+//    | Success(routes,_, _) ->
+//      let klass = routes2Class routes options
+//      let routeTree = buildRouteTree routes
+//      renderMainClass klass routeTree options
+//    | Failure (msg,_,_) ->
+//      failwithf "Failed to parse routes. Error: %s" msg
+//       
+  let compileRoutes (options:RouteCompilationArgs) (output:TextWriter) = 
+    let routes = options.parse
+    let klass = routes2Class routes options
+    let routeTree = buildRouteTree routes
+    let code = renderMainClass klass routeTree options
+    output.Write(code)
 
-  let compileRoutes (options:RouteProviderOptions) =
-    match runParserOnString RouteParsing.pRoutes () "User routes" (options.routesStr) with
-    | Success(routes,_, _) ->
-      let klass = routes2Class routes options
-      let routeTree = buildRouteTree routes
-      let code = renderMainClass klass routeTree options
-    
-      let dllFile = System.IO.Path.GetTempFileName()
-      let compilerArgs =  dict [("CompilerVersion", "v4.0")]
-      let compiler = new Microsoft.CSharp.CSharpCodeProvider(compilerArgs)
-    
-      let parameters = new System.CodeDom.Compiler.CompilerParameters([|"mscorlib.dll"; "System.Core.dll"; "System.dll"|])
-      parameters.TreatWarningsAsErrors <- true
-
-      if options.inputTypeName.IsSome || options.returnTypeName.IsSome then
-        options.config |> Option.iter (fun config ->
-          for r in config.ReferencedAssemblies do
-            if Path.GetFileName(r) <> "RouteProvider.dll" then
-              Debug.Print <| sprintf "Added ref \"%s\"" r
-              parameters.ReferencedAssemblies.Add(r) |> ignore)
-
-      parameters.OutputAssembly <- dllFile
-      parameters.CompilerOptions <- "/t:library"
-      let compilerResults = compiler.CompileAssemblyFromSource(parameters, [| code |])
-      if compilerResults.Errors.HasErrors then
-        let errors = seq { for err in compilerResults.Errors do yield err }
-        failwithf "Got error: %A" (errors |> Seq.head)
-      else
-        let asm = System.Reflection.Assembly.LoadFrom(dllFile)
-        asm.GetType <| "IsakSky." + options.typeName
-    | Failure (msg,_,_) ->
-      failwithf "Failed to parse routes. Error: %s" msg
+//  let compileRoutes (options:RouteProviderOptions) =
+//    match runParserOnString RouteParsing.pRoutes () "User routes" (options.routesStr) with
+//    | ParserResult.Success(routes,_, _) ->
+//      let klass = routes2Class routes options
+//      let routeTree = buildRouteTree routes
+//      let code = renderMainClass klass routeTree options
+//    
+//      let dllFile = System.IO.Path.GetTempFileName()
+//      let compilerArgs =  dict [("CompilerVersion", "v4.0")]
+//      let compiler = new Microsoft.CSharp.CSharpCodeProvider(compilerArgs)
+//    
+//      let parameters = new System.CodeDom.Compiler.CompilerParameters([|"mscorlib.dll"; "System.Core.dll"; "System.dll"|])
+//      parameters.TreatWarningsAsErrors <- true
+//
+//      if options.inputTypeName.IsSome || options.returnTypeName.IsSome then
+//        options.config |> Option.iter (fun config ->
+//          for r in config.ReferencedAssemblies do
+//            if Path.GetFileName(r) <> "RouteProvider.dll" then
+//              Debug.Print <| sprintf "Added ref \"%s\"" r
+//              parameters.ReferencedAssemblies.Add(r) |> ignore)
+//
+//      parameters.OutputAssembly <- dllFile
+//      parameters.CompilerOptions <- "/t:library"
+//      let compilerResults = compiler.CompileAssemblyFromSource(parameters, [| code |])
+//      if compilerResults.Errors.HasErrors then
+//        let errors = seq { for err in compilerResults.Errors do yield err }
+//        failwithf "Got error: %A" (errors |> Seq.head)
+//      else
+//        let asm = System.Reflection.Assembly.LoadFrom(dllFile)
+//        asm.GetType <| "IsakSky." + options.typeName
+//    | ParserResult.Failure (msg,_,_) ->
+//      failwithf "Failed to parse routes. Error: %s" msg
