@@ -14,7 +14,7 @@ let routes = """
 //  GET projects/{projectId} as getProject
 //"""
 
-type MyRoutes = IsakSky.RouteProvider<routes, true, true, @"C:\Users\Isak\Desktop\g.cs">
+type MyRoutes = IsakSky.RouteProvider<routes, true, true, @"C:\Users\Isak\Desktop\in_the_barn3.cs">
 
 //let router = MyRoutes(
 //              getProject = (fun projectId -> printfn "You asked for project %d" projectId),

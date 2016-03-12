@@ -1,110 +1,131 @@
 Configuration:
 
-    type MyRoutes = IsakSky.RouteProvider<routes, "Microsoft.Owin.IOwinContext", "HttpWebResponse">
+    type MyRoutes = IsakSky.RouteProvider<routes, true, true>
 
 
-Generated code with input type "Microsoft.Owin.IOwinContext" and return type "HttpWebResponse":
+Generated code with input and return type:
 
-    [lang=csharp]
-    using System;
-    namespace IsakSky {
-      public class MyRoutes {
-        public static class Builders{
-          public static string getProject(long projectId){
-            return string.Format("/projects/{0}", projectId);
-          }
-          public static string getProjectComments(long projectId, long commentId){
-            return string.Format("/projects/{0}/comments/{1}", projectId, commentId);
-          }
-          public static string updateProject(int projectId){
-            return string.Format("/projects/{0}", projectId);
-          }
-          public static string GET__projects_statistics(){
-            return "/projects/statistics";
-          }
-          public static string getPerson(string name){
-            return string.Format("/people/{0}", name);
-          }
-        }
-        public MyRoutes(
-          Func<Microsoft.Owin.IOwinContext, long, HttpWebResponse> getProject,
-          Func<Microsoft.Owin.IOwinContext, long, long, HttpWebResponse> getProjectComments,
-          Func<Microsoft.Owin.IOwinContext, int, HttpWebResponse> updateProject,
-          Func<Microsoft.Owin.IOwinContext, HttpWebResponse> GET__projects_statistics,
-          Func<Microsoft.Owin.IOwinContext, string, HttpWebResponse> getPerson,
-          Func<Microsoft.Owin.IOwinContext, string, string, HttpWebResponse> notFound = null) {
-            this.getProject = getProject;
-            this.getProjectComments = getProjectComments;
-            this.updateProject = updateProject;
-            this.GET__projects_statistics = GET__projects_statistics;
-            this.getPerson = getPerson;
-            this.notFound = notFound;
-          }
-        public readonly Func<Microsoft.Owin.IOwinContext, long, HttpWebResponse> getProject;
-        public readonly Func<Microsoft.Owin.IOwinContext, long, long, HttpWebResponse> getProjectComments;
-        public readonly Func<Microsoft.Owin.IOwinContext, int, HttpWebResponse> updateProject;
-        public readonly Func<Microsoft.Owin.IOwinContext, HttpWebResponse> GET__projects_statistics;
-        public readonly Func<Microsoft.Owin.IOwinContext, string, HttpWebResponse> getPerson;
-        public readonly Func<Microsoft.Owin.IOwinContext, string, string, HttpWebResponse> notFound;
+    [lang=fsharp]
+    namespace IsakSky
+    open System
+    module RouteProvider =
+      let getProject (projectId:int64) =
+          "projects/" + projectId.ToString()
+      let getProjectComments (projectId:int64) (commentId:int64) =
+          "projects/" + projectId.ToString() + "comments/" + commentId.ToString()
+      let updateProject (projectId:int) =
+          "projects/" + projectId.ToString()
+      let GET__projects_statistics  =
+          "projects/statistics/"
+      let getPerson (name:string) =
+          "people/" + name
     
-        public HttpWebResponse DispatchRoute(Microsoft.Owin.IOwinContext context, string verb, string path) {
-          var parts = path.Split('/');
-          var start = 0;
-          if (parts[0] == "") { start = 1; }
-          var endOffset = parts.Length > 0 && parts[parts.Length - 1] == "" ? 1 : 0;
-          switch (parts.Length - start - endOffset) {
-            case 2:
-              if (parts[start + 0] == "people") {
-                var name = parts[start + 1];
-                if (verb == "GET") { return this.getPerson(context, name); }
-              }
-              else if (parts[start + 0] == "projects") {
-                if (parts[start + 1] == "statistics") {
-                  if (verb == "GET") { return this.GET__projects_statistics(context); }
-                }
-                else if (StringIsAllDigits(parts[start + 1])) {
-                  var projectId = int.Parse(parts[start + 1]);
-                  if (verb == "PUT") { return this.updateProject(context, projectId); }
-                }
-                else if (StringIsAllDigits(parts[start + 1])) {
-                  var projectId = long.Parse(parts[start + 1]);
-                  if (verb == "GET") { return this.getProject(context, projectId); }
-                }
-              }
-              break;
-            case 4:
-              if (parts[start + 0] == "projects") {
-                if (StringIsAllDigits(parts[start + 1])) {
-                  var projectId = long.Parse(parts[start + 1]);
-                  if (parts[start + 2] == "comments") {
-                    if (StringIsAllDigits(parts[start + 3])) {
-                      var commentId = long.Parse(parts[start + 3]);
-                      if (verb == "GET") { return this.getProjectComments(context, projectId, commentId); }
-                    }
-                  }
-                }
-              }
-              break;
-            default: break;
-          }
-          if (this.notFound == null) { throw new RouteNotMatchedException(verb, path); }
-          else { return this.notFound(context, verb, path); }
-        }
-        static bool StringIsAllDigits(string s) {
-          foreach (char c in s) {
-            if (c < '0' || c > '9') { return false; }
-          }
-          return true;
-        }
-        public class RouteNotMatchedException : Exception {
-          public string Verb { get; private set; }
-          public string Path { get; private set; }
-          public RouteNotMatchedException(string verb, string path) {
-            this.Verb = verb;
-            this.Path = path;
-          }
-        }
-      }
-    }
+      module Internal =
+        let stringIsAllDigits (s:string) =
+          let mutable i = 0
+          let mutable foundNonDigit = false
+          while i < s.Length && not foundNonDigit do
+            let c = s.[i]
+            if c < '0' || c > '9' then foundNonDigit <- true
+            i <- i + 1
+          not foundNonDigit
+        exception RouteNotMatchedException of string * string
+    
+      type MyRoutes<'TContext, 'TReturn> =
+        { getProject: 'TContext->int64->'TReturn
+          getProjectComments: 'TContext->int64->int64->'TReturn
+          updateProject: 'TContext->int->'TReturn
+          GET__projects_statistics: 'TContext->'TReturn
+          getPerson: 'TContext->string->'TReturn
+          notFound: ('TContext->string->string->'TReturn) option }
+    
+        member this.DispatchRoute (context:'TContext) (verb:string) (path:string) : 'TReturn =
+          let parts = path.Split('/')
+          let start = if parts.[0] = "" then 1 else 0
+          let endOffset = if parts.Length > 0 && parts.[parts.Length - 1] = "" then 1 else 0
+          match parts.Length - start - endOffset with
+          | 2 ->
+            if parts.[start + 0] = "people" then (* hi *)
+              let name = parts.[start + 1]
+              if verb = "GET" then (* ho *) 
+                this.getPerson context name
+              else
+                match this.notFound with
+                | None -> raise (Internal.RouteNotMatchedException (verb, path))
+                | Some(notFound) -> notFound context verb path
+    
+            elif parts.[start + 0] = "projects" then (* hi *)
+              if parts.[start + 1] = "statistics" then (* hi *)
+                if verb = "GET" then (* ho *) 
+                  this.GET__projects_statistics context
+                else
+                  match this.notFound with
+                  | None -> raise (Internal.RouteNotMatchedException (verb, path))
+                  | Some(notFound) -> notFound context verb path
+    
+              elif Internal.stringIsAllDigits(parts.[start + 1]) then (* hi *)
+                let projectId = Int32.Parse(parts.[start + 1])
+                if verb = "PUT" then (* ho *) 
+                  this.updateProject context projectId
+                else
+                  match this.notFound with
+                  | None -> raise (Internal.RouteNotMatchedException (verb, path))
+                  | Some(notFound) -> notFound context verb path
+    
+              elif Internal.stringIsAllDigits(parts.[start + 1]) then (* hi *)
+                let projectId = Int64.Parse(parts.[start + 1])
+                if verb = "GET" then (* ho *) 
+                  this.getProject context projectId
+                else
+                  match this.notFound with
+                  | None -> raise (Internal.RouteNotMatchedException (verb, path))
+                  | Some(notFound) -> notFound context verb path
+    
+              else
+                match this.notFound with
+                | None -> raise (Internal.RouteNotMatchedException (verb, path))
+                | Some(notFound) -> notFound context verb path
+    
+            else
+              match this.notFound with
+              | None -> raise (Internal.RouteNotMatchedException (verb, path))
+              | Some(notFound) -> notFound context verb path
+          | 4 ->
+            if parts.[start + 0] = "projects" then (* ho *) 
+              if Internal.stringIsAllDigits(parts.[start + 1]) then (* ho *) 
+                let projectId = Int64.Parse(parts.[start + 1])
+                if parts.[start + 2] = "comments" then (* ho *) 
+                  if Internal.stringIsAllDigits(parts.[start + 3]) then (* ho *) 
+                    let commentId = Int64.Parse(parts.[start + 3])
+                    if verb = "GET" then (* ho *) 
+                      this.getProjectComments context projectId commentId
+                    else
+                      match this.notFound with
+                      | None -> raise (Internal.RouteNotMatchedException (verb, path))
+                      | Some(notFound) -> notFound context verb path
+    
+                  else
+                    match this.notFound with
+                    | None -> raise (Internal.RouteNotMatchedException (verb, path))
+                    | Some(notFound) -> notFound context verb path
+    
+                else
+                  match this.notFound with
+                  | None -> raise (Internal.RouteNotMatchedException (verb, path))
+                  | Some(notFound) -> notFound context verb path
+    
+              else
+                match this.notFound with
+                | None -> raise (Internal.RouteNotMatchedException (verb, path))
+                | Some(notFound) -> notFound context verb path
+    
+            else
+              match this.notFound with
+              | None -> raise (Internal.RouteNotMatchedException (verb, path))
+              | Some(notFound) -> notFound context verb path
+          | _ ->
+            match this.notFound with
+            | None -> raise (Internal.RouteNotMatchedException (verb, path))
+            | Some(notFound) -> notFound context verb path
     
     

@@ -164,9 +164,16 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
           log "Reply from emitter: %A" res            
 
           match res with
-          | IgnoredStale -> RouteProviderCore.GetOrCreateFakeAsm(typeName, cfg.TemporaryFolder)
-          | IgnoredBadExtension -> failwith "Bad output file extension. Only *.fs, *.cs, and *.dll supported"
-          | Ok | OkSecondaryThread -> RouteProviderCore.GetOrCreateFakeAsm(typeName, cfg.TemporaryFolder)
+          | IgnoredStale -> 
+            RouteProviderCore.GetOrCreateFakeAsm(typeName, cfg.TemporaryFolder)
+          | IgnoredBadExtension -> 
+            failwith "Bad output file extension. Only *.fs, *.cs, and *.dll supported"
+          | RefuseFilenameTaken -> 
+            failwithf "Refusing to overwrite file \"%s\". Filename is taken, and does not look generated." resolvedOutputPath
+          | Ok | OkSecondaryThread -> 
+            log "Triggering invalidation..."
+            invalidation.Trigger(this, new EventArgs())
+            RouteProviderCore.GetOrCreateFakeAsm(typeName, cfg.TemporaryFolder)
       member this.GetInvokerExpression(syntheticMethodBase, parameters) =
           match syntheticMethodBase with
           | :? ConstructorInfo as ctor ->

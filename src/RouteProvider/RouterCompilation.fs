@@ -1,6 +1,7 @@
 ﻿namespace IsakSky.RouteProvider
 open FParsec
 open Route
+open System
 open System.Text
 open Microsoft.FSharp.Core.CompilerServices
 open Microsoft.FSharp.Collections
@@ -15,9 +16,11 @@ module RouteCompilation =
        parse: Route list
        inputType: bool
        returnType: bool
+       nameSpace: string option
+       moduleName: string option
        outputType: CompilationOutputType }
   and CompilationOutputType =
-  | CSharp
+  | FSharp
 
   type RouterKlass = 
     { name: string
@@ -47,7 +50,7 @@ module RouteCompilation =
     | None ->
       let routeParts = route.routeSegments |> List.choose  (function 
         | ConstantSeg(name) -> Some(name)
-        | _ -> None) 
+        | _ -> None)
       sprintf "%s__%s" (route.verb) (String.concat "_" routeParts)
 
   let routeIVars (route:Route) =
@@ -88,30 +91,19 @@ module RouteCompilation =
       routeKlasses = (makeRouteKlasses routes)
       methods = []}
 
-  type ClassWriter () =
+  type FSharpWriter (indentSize:int) =
     let mutable indentation = 0
+    member val IndentSize = indentSize with get
     member val content = new StringBuilder() with get
     member x.IncIndent () =
-      indentation <- indentation + 2
+      indentation <- indentation + x.IndentSize
     member x.DecIndent () =
-      indentation <- indentation - 2
+      indentation <- indentation - x.IndentSize
     member x.indent () = 
       x.IncIndent()
       { new System.IDisposable with 
           member y.Dispose() = 
             x.DecIndent() }
-    member w.block (newline:bool) =
-      w.Write("{")
-      if newline then w.Write("\n") else w.Write(" ")
-      w.IncIndent()
-      { new System.IDisposable with 
-          member y.Dispose() = 
-            w.DecIndent()
-            if newline then 
-              w.StartWriteLine("}") 
-            else w.Write(" }\n") }
-    member w.block () =
-      w.block(true)
     member x.StartWriteLine(line: string) = 
       let pfx = new string(' ', indentation)
       let s = sprintf "%s%s\n" pfx line
@@ -123,117 +115,102 @@ module RouteCompilation =
     member x.Write(str:string) =
       x.content.Append(str) |> ignore
 
-  let renderRouteBuilder (klass:RouteBuilder) (w:ClassWriter) =
-    w.StartWrite <| sprintf "public static string %s(" (klass.name)
-  
-    let argStrs =
-      klass.arguments
-      |> List.map (function
-        | FunctionParam(Int64Param(name)) -> sprintf "long %s" name
-        | FunctionParam(IntParam(name)) -> sprintf "int %s" name
-        | FunctionParam(StringParam(name)) -> sprintf "string %s" name)
+  let idVal = new FParsec.IdentifierValidator()
 
-    w.Write <| String.concat ", " argStrs
-    w.Write ")"
+  let quoteIfNeeded (fnName:string) =
+    // Todo: check if this is right
+    let s, _ = idVal.ValidateAndNormalize(fnName) 
+    match s with
+    | null -> sprintf "``%s``" s
+    | _ -> s
 
-    using (w.block()) (fun _ ->
-      let hasDynSeg = klass.segments |> List.tryFind (function | ConstantSeg(_) -> false | _ -> true) |> Option.isSome
-      if hasDynSeg then
-        let rec buildFmtStr segs dynIdx ret =
+  let renderRouteBuilder (klass:RouteBuilder) (w:FSharpWriter) =
+    w.StartWrite <| sprintf "let %s " (quoteIfNeeded <| klass.name)
+    using (w.indent()) <| fun _ ->
+      let argStrs =
+        klass.arguments
+        |> List.map (function
+          | FunctionParam(Int64Param(name)) -> sprintf "(%s:int64)" (quoteIfNeeded name)
+          | FunctionParam(IntParam(name)) -> sprintf "(%s:int)" (quoteIfNeeded name)
+          | FunctionParam(StringParam(name)) -> sprintf "(%s:string)" (quoteIfNeeded name))
+      let argStr = argStrs |> String.concat " "
+      w.Write <| sprintf "%s =\n" argStr
+
+      using (w.indent()) (fun _ ->
+        let rec mkRouteBuilder segs (tmpConsts:ResizeArray<_>) (ret:ResizeArray<_>) =
           match segs with
-          | [] -> ret
+          | [] -> 
+            if tmpConsts.Count > 0 then
+              let sfx = tmpConsts |> String.concat "/" |> sprintf "\"%s/\""
+              ret.Add(sfx)
+            ret |> String.concat " + "
           | ConstantSeg(name)::segs ->
-            buildFmtStr segs dynIdx (name::ret)
-          | Int64Seg(_)::segs 
-          | IntSeg(_)::segs 
-          | StringSeg(_)::segs ->
-            let s = sprintf "{%d}" dynIdx
-            buildFmtStr segs (dynIdx + 1) (s::ret)
-            
-        let fmtStr = 
-          buildFmtStr klass.segments 0 []
-          |> List.rev          
-          |> String.concat "/"
-          |> fun s -> "/" + s
+            tmpConsts.Add(name)
+            mkRouteBuilder segs tmpConsts ret
+          | seg::segs ->
+            let name = match seg with 
+            | Int64Seg(name) | IntSeg(name) | StringSeg(name) -> name 
+            | ConstantSeg(_) -> failwith "Logic error"
 
-        let argsStr = 
-          klass.segments 
-            |> List.choose (fun seg ->
-              match seg with
-              | ConstantSeg(_) -> None
-              | Int64Seg(name) 
-              | IntSeg(name) 
-              | StringSeg(name) -> Some(name))
-            |> String.concat ", "
+            if tmpConsts.Count > 0 then
+              let pfx = tmpConsts |> String.concat "/" |> sprintf "\"%s/\""
+              tmpConsts.Clear()
+              ret.Add(pfx)
+            let argPart = match seg with
+            | Int64Seg(_)
+            | IntSeg(_) -> sprintf "%s.ToString()" name
+            | StringSeg(_) -> name
+            | ConstantSeg(_) -> failwith "Logic error"
 
-        w.StartWriteLine <| sprintf "return string.Format(\"%s\", %s);" fmtStr argsStr
-      else
-        let constStr =
-            klass.segments 
-            |> List.map (fun seg ->
-              match seg with
-              | ConstantSeg(name) -> name
-              | _ -> failwith "Logic error")
-            |> String.concat "/"
-        w.StartWriteLine <| sprintf "return \"/%s\";" constStr)
+            ret.Add(argPart)
+            mkRouteBuilder segs tmpConsts ret
+        w.StartWriteLine <| mkRouteBuilder (klass.segments) (ResizeArray<_>()) (ResizeArray<_>()))
 
   let dynParamTypeName (dynParam:DynamicParam) =
     match dynParam with
-    | Int64Param(_) -> "long"
+    | Int64Param(_) -> "int64"
     | IntParam(_) -> "int"
     | StringParam(_) -> "string"
 
   let paramListTypeString (paramList: DynamicParam list) (options:RouteCompilationArgs) =
-    let genericTypes = paramList |> List.map dynParamTypeName
-    let ftype = if options.returnType then "Func" else "Action"
+    let fnTypes = paramList |> List.map dynParamTypeName |> ResizeArray
+    
+    if fnTypes.Count = 0 || options.inputType then
+      let inTpName = if options.inputType then "'TContext" else "unit"
+      fnTypes.Insert(0, inTpName)
 
-    let types' = 
-      if options.inputType then
-        "TContext" :: genericTypes
-      else genericTypes
+    let outTpName = if options.returnType then "'TReturn" else "unit"
+    fnTypes.Add(outTpName)
 
-    let types =
-      if options.returnType then
-        types' @ ["TReturn"]
-      else  types'
-
-    if types.Length > 0 then
-      sprintf "%s<%s>" ftype (String.concat ", " types)
-    else
-      ftype
+    String.concat "->" fnTypes
 
   let notFoundHandlerParams = [
-    StringParam("Verb")
-    StringParam("Path")
+    StringParam("verb")
+    StringParam("path")
   ]
 
   let notFoundCtorStr (options:RouteCompilationArgs) =
     let typeStr = paramListTypeString notFoundHandlerParams options
-    sprintf "%s notFound" typeStr
+    sprintf "notFound: (%s) option" typeStr
 
-  let renderMainCtor (klassName:string) (ctorParams:HandlerCtorParam list) (options:RouteCompilationArgs) (w:ClassWriter) =
-    w.StartWriteLine <| sprintf "public %s(" klassName
+  let renderRecordValues (klassName:string) (ctorParams:HandlerCtorParam list) (options:RouteCompilationArgs) (w:FSharpWriter) =
+    w.StartWrite "{"
 
-    using (w.indent()) <| fun _ ->
-        let ctorParams = ctorParams |> Array.ofList
-        for i in [0..ctorParams.Length - 1] do
-          let ctorParam = ctorParams.[i]
-          let ctorArgs = ctorParam.handlerArgs |> List.map (function | FunctionParam(p) -> p)
-          w.StartWrite <| sprintf "%s %s" (paramListTypeString ctorArgs options) (ctorParam.name)
-          w.Write(",\n")
-        w.StartWrite <| notFoundCtorStr options
-        w.Write(" = null) ")
+    let ctorParams = ctorParams |> Array.ofList
+    for i in [0..ctorParams.Length - 1] do
+      let ctorParam = ctorParams.[i]
+      let ctorArgs = ctorParam.handlerArgs |> List.map (function | FunctionParam(p) -> p)
 
-        using (w.block())  <| fun _ ->
-          for ctorParam in ctorParams do
-            w.StartWriteLine <| sprintf "this.%s = %s;" (ctorParam.name) (ctorParam.name)
-          w.StartWriteLine <| sprintf "this.notFound = notFound;"
-
-  let renderHandlerCtorParamsIvars (ctorParams:HandlerCtorParam list) (options:RouteCompilationArgs) (w:ClassWriter) =
-    for ctorParam in ctorParams do
-      let pms = ctorParam.handlerArgs |> List.map (function | FunctionParam(p) -> p)
-      w.StartWriteLine <| (sprintf "public readonly %s %s;" (paramListTypeString pms options) (ctorParam.name))
-    w.StartWriteLine <| sprintf "public readonly %s;" (notFoundCtorStr options)
+      if i = 0 then
+        let spaces = new String(' ', w.IndentSize - 1) // take already written opening brace into account
+        w.Write <| sprintf "%s%s: %s" spaces (ctorParam.name) (paramListTypeString ctorArgs options) 
+      else
+        let spaces = new String(' ', w.IndentSize)
+        w.StartWrite <| sprintf "%s%s: %s" spaces (ctorParam.name) (paramListTypeString ctorArgs options) 
+      
+      w.Write("\n")
+    w.StartWrite <| sprintf "%s%s" (new String(' ', w.IndentSize)) (notFoundCtorStr options)
+    w.Write(" }")
 
   type RouteNode = 
     { endPoints: Endpoint list
@@ -422,6 +399,16 @@ module RouteCompilation =
   | Choices of ConditionNode list
   | Body of string
 
+  let renderCatch (options:RouteCompilationArgs) (w:FSharpWriter) =
+    w.StartWriteLine <| "match this.notFound with"
+    w.StartWriteLine <| "| None -> raise (Internal.RouteNotMatchedException (verb, path))"
+    //if (this.notFound == null) { throw new RouteNotMatchedException(verb, path); }"
+    let notFoundArgs' = ["verb"; "path"]
+    let notFoundArgs = if options.inputType then "context" :: notFoundArgs' else notFoundArgs'
+    let notFoundArgsStr = notFoundArgs |> String.concat " "
+    //let retStr = if options.returnType then "return " else ""
+    w.StartWriteLine <| sprintf "| Some(notFound) -> notFound %s" notFoundArgsStr
+
   let if2Cond (routeIf:RouteIfTest) (options:RouteCompilationArgs) : ConditionNode = 
     let rec renderIfAux (routeIf:RouteIfTest) (precedingSegs:NamedRouteSegment list) (depth:int) =
       match routeIf.seg with
@@ -429,25 +416,25 @@ module RouteCompilation =
         let idx = routeIf.partIdx.Value
         match seg with 
         | ConstantSeg(name) ->
-          { preConditionCheck = Some(sprintf "parts[start + %d] == \"%s\"" idx name)
+          { preConditionCheck = Some(sprintf "parts.[start + %d] = \"%s\"" idx name)
             assignment = None
             body = routeIf.children |> List.map (fun child -> 
               renderIfAux child (seg :: precedingSegs) (depth + 1)) |> Choices }
         | StringSeg(name) ->
           { preConditionCheck = None
-            assignment = Some(sprintf "var %s = parts[start + %d];" name idx)
+            assignment = Some(sprintf "let %s = parts.[start + %d]" name idx)
             body = routeIf.children |> List.map (fun child ->
               renderIfAux child (seg :: precedingSegs) (depth + 1)) |> Choices }
         | Int64Seg(name)
         | IntSeg(name) ->
           let tname = 
             match seg with
-            | IntSeg(_) -> "int"
-            | Int64Seg(_) -> "long"
+            | IntSeg(_) -> "Int32"
+            | Int64Seg(_) -> "Int64"
             | _ -> failwith "Logic error"
 
-          { preConditionCheck = Some(sprintf "StringIsAllDigits(parts[start + %d])" idx)
-            assignment = Some(sprintf "var %s = %s.Parse(parts[start + %d]);" name tname idx)
+          { preConditionCheck = Some(sprintf "Internal.stringIsAllDigits(parts.[start + %d])" idx)
+            assignment = Some(sprintf "let %s = %s.Parse(parts.[start + %d])" name tname idx)
             body = routeIf.children |> List.map (fun child ->
               renderIfAux child (seg :: precedingSegs) (depth + 1)) |> Choices }
       | Endpoint(endpoint) ->
@@ -463,56 +450,66 @@ module RouteCompilation =
           else dynArgs
 
         let handlerCall =
-          if options.returnType then
-            sprintf "return this.%s(%s);" (endpoint.handlerName) (args |> String.concat ", ")
-          else
-            sprintf "this.%s(%s); return;" (endpoint.handlerName) (args |> String.concat ", ")
-        { preConditionCheck = Some(sprintf "verb == \"%s\"" (endpoint.verb))
+          sprintf "this.%s %s" (endpoint.handlerName) (args |> String.concat " ")
+        { preConditionCheck = Some(sprintf "verb = \"%s\"" (endpoint.verb))
           assignment = None
           body = Body(handlerCall) }
     renderIfAux routeIf [] 0
 
-  let rec renderRouteConds (routeConds: ConditionNode list) (w:ClassWriter) =
+  let rec renderRouteConds (routeConds: ConditionNode list) (options: RouteCompilationArgs) (w:FSharpWriter) =
     match routeConds with
     | [] -> failwith "Logic error"
     | [cond] ->
       match cond.preConditionCheck with
       | Some(check) ->
-        w.StartWrite <| sprintf "if (%s) " check
-        let doIndent = bodyIndent cond.body
-        using (w.block(doIndent)) <| fun _ ->
+        w.StartWrite <| sprintf "if %s then (* ho *) " check
+        w.Write("\n")
+        using (w.indent()) <| fun _ ->
           cond.assignment |> Option.iter (fun assig -> w.StartWriteLine assig)  
-          renderRouteCondsBody (cond.body) w    
+          renderRouteCondsBody (cond.body) options w
+        w.Write("\n")
+        w.StartWriteLine("else")    
+        using (w.indent()) <| fun _ ->
+          renderCatch options w
       | None -> 
         cond.assignment |> Option.iter (fun assig -> w.StartWriteLine assig)  
-        renderRouteCondsBody (cond.body) w    
+        renderRouteCondsBody (cond.body) options w    
     | _ ->
+      let mutable lastElse = false
       routeConds |> List.iteri (fun i cond ->
         let keyword = 
           if cond.preConditionCheck.IsSome then
-            if i = 0 then "if" else "else if"
+            if i = 0 then "if" else "elif"
           else "else"
-
+        let thenS = if keyword = "else" then "" else "then (* hi *)"
         w.StartWrite <| keyword + " "
-        cond.preConditionCheck |> Option.iter (fun check ->
-          w.Write <| sprintf "(%s) " check)
-        let doIndent = bodyIndent cond.body
-        using (w.block(doIndent)) <| fun _ ->
+        match cond.preConditionCheck with
+        | Some(check) ->
+          w.Write <| sprintf "%s %s\n" check thenS
+        | None -> w.Write "\n"
+        
+        using (w.indent()) <| fun _ ->
           cond.assignment |> Option.iter (fun s -> w.StartWriteLine s)
-          renderRouteCondsBody (cond.body) w)
+          renderRouteCondsBody (cond.body) options w
+        w.Write("\n")
+        
+        if keyword = "else" then lastElse <- true)
+      if not lastElse then
+        w.StartWriteLine("else")
+        using (w.indent()) <| fun _ -> renderCatch options w          
   and bodyIndent body =
     match body with 
     | Choices(_) -> true 
     | Body(_) -> false
-  and renderRouteCondsBody body (w:ClassWriter) =
+  and renderRouteCondsBody body (options: RouteCompilationArgs) (w:FSharpWriter) =
     match body with
     | Choices(choices) ->
-      renderRouteConds choices w 
+      renderRouteConds choices options w 
     | Body(s) ->
       let doIndent = bodyIndent body
-      if doIndent then w.StartWriteLine(s) else w.Write(s)
+      if doIndent then w.Write(s) else w.StartWrite(s)
 
-  let renderRouteGroupMatchTest (group:RouteTreeFragment list) (options:RouteCompilationArgs) (w:ClassWriter) =
+  let renderRouteGroupMatchTest (group:RouteTreeFragment list) (options:RouteCompilationArgs) (w:FSharpWriter) =
     Debug.Print <| sprintf "Group:\n%A" group
     let routeConds = 
       group
@@ -520,150 +517,99 @@ module RouteCompilation =
       |> List.map (fun IF -> if2Cond IF options)
 
     Debug.Print <| sprintf "RouteConds:\n%A" routeConds
-    renderRouteConds routeConds w
+    renderRouteConds routeConds options w
 
-  let renderDispatchMethod (routeTree:RouteNode) (options:RouteCompilationArgs) (w:ClassWriter) =
+  let renderDispatchMethod (routeTree:RouteNode) (options:RouteCompilationArgs) (w:FSharpWriter) =
     let routeGroups = routeTree |> flattenRouteTree |> groupRoutes
 
-    let baseArgs = [
-      "string verb"
-      "string path"  
-    ]
+    let baseArgs = ["(verb:string)"; "(path:string)"]
 
     let args = 
-      if options.inputType then "TContext context" :: baseArgs
+      if options.inputType then "(context:'TContext)" :: baseArgs
       else baseArgs
 
     let retTp =
-      if options.returnType then "TReturn"
-      else "void"
+      if options.returnType then "'TReturn"
+      else "unit"
     
-    let argsStr = args |> String.concat ", "
-    w.StartWrite <| sprintf "public %s DispatchRoute(%s) " retTp argsStr
-    using (w.block()) (fun _ ->
-      w.StartWriteLine <| "var parts = path.Split('/');"
+    let argsStr = args |> String.concat " "
+    w.StartWriteLine <| sprintf "member this.DispatchRoute %s : %s =" argsStr retTp 
+    using (w.indent()) (fun _ ->
+      w.StartWriteLine <| "let parts = path.Split('/')"
       // Normalize starting and ending slash
-      w.StartWriteLine <| "var start = 0;"
-      w.StartWriteLine <| "if (parts[0] == \"\") { start = 1; }"
-      w.StartWriteLine <| "var endOffset = parts.Length > 0 && parts[parts.Length - 1] == \"\" ? 1 : 0;"
-      w.StartWrite <| "switch (parts.Length - start - endOffset) "
-      using (w.block()) (fun _ ->
-        for n, group in routeGroups do
-          w.StartWriteLine <| sprintf "case %d:" n
-          using (w.indent()) (fun _ ->
-            renderRouteGroupMatchTest group options w
-            w.StartWriteLine "break;")
-        w.StartWriteLine <| "default: break;")
-      w.StartWriteLine <| "if (this.notFound == null) { throw new RouteNotMatchedException(verb, path); }"
-
-      let notFoundArgs' = ["verb"; "path"]
-      let notFoundArgs = if options.inputType then "context" :: notFoundArgs' else notFoundArgs'
-      let notFoundArgsStr = notFoundArgs |> String.concat ", "
-      let retStr = if options.returnType then "return " else ""
-      w.StartWriteLine <| sprintf "else { %sthis.notFound(%s); }" retStr notFoundArgsStr)
+      w.StartWriteLine <| "let start = if parts.[0] = \"\" then 1 else 0"
+      w.StartWriteLine <| "let endOffset = if parts.Length > 0 && parts.[parts.Length - 1] = \"\" then 1 else 0"
+      w.StartWriteLine <| "match parts.Length - start - endOffset with"
+      for n, group in routeGroups do
+        w.StartWriteLine <| sprintf "| %d ->" n
+        using (w.indent()) (fun _ ->
+          renderRouteGroupMatchTest group options w)
+      w.StartWriteLine <| "| _ ->"
+      using (w.indent()) <| fun _ ->
+        renderCatch options w)  
+      
 
   let digitCheckFn = """
-  static bool StringIsAllDigits(string s) {
-    foreach (char c in s) {
-      if (c < '0' || c > '9') { return false; }
-    }
-    return true;
-  }"""
+  let stringIsAllDigits (s:string) =
+    let mutable i = 0
+    let mutable foundNonDigit = false
+    while i < s.Length && not foundNonDigit do
+      let c = s.[i]
+      if c < '0' || c > '9' then foundNonDigit <- true
+      i <- i + 1
+    not foundNonDigit
+  """
 
   let routeNotMatchedEx = """
-  public class RouteNotMatchedException : Exception {
-    public string Verb { get; private set; }
-    public string Path { get; private set; }
-    public RouteNotMatchedException(string verb, string path) {
-      this.Verb = verb;
-      this.Path = path;
-    }
-  }"""
+  exception RouteNotMatchedException of string * string
+  """
 
-  let renderMultiLineStr (w:ClassWriter) (s:string) =
+  let renderMultiLineStr (w:FSharpWriter) (s:string) =
     let mutable startIdx = 0
     for line in s.Split('\n') do
       if not <| System.String.IsNullOrWhiteSpace(line) then
         if startIdx = 0 then startIdx <- line |> Seq.findIndex (fun c -> c <> ' ')
         w.StartWriteLine <| line.Substring(startIdx)
 
-  let renderUtilities (w:ClassWriter) = 
-    renderMultiLineStr w digitCheckFn
-    renderMultiLineStr w routeNotMatchedEx
+  let renderUtilities (w:FSharpWriter) = 
+    w.StartWriteLine "module Internal ="
+    using (w.indent()) <| fun _ ->
+      renderMultiLineStr w digitCheckFn 
+      renderMultiLineStr w routeNotMatchedEx
 
   let renderMainClass (klass:RouterKlass) (routeTree:RouteNode) (options:RouteCompilationArgs) =
-    let w = new ClassWriter()
-    w.StartWriteLine "using System;"
-    w.StartWrite "namespace IsakSky "
-    using (w.block()) <| fun _ ->
+    let w = new FSharpWriter(2)
+    w.StartWriteLine <| sprintf "namespace %s" (defaultArg options.nameSpace "IsakSky")
+    w.StartWriteLine "open System"
+    w.StartWriteLine <| sprintf "module %s =" (defaultArg options.moduleName "RouteProvider")
+    using (w.indent()) <| fun _ ->
+      for k in klass.routeKlasses do renderRouteBuilder k w
+      
+      w.Write("\n")
+      renderUtilities w
+
+      w.Write("\n")
       let typeArgStr =
         match options.inputType, options.returnType with
-        | true, true -> "<TContext, TReturn>"
-        | true, false -> "<TContext>"
-        | false, true -> "<TReturn>"
+        | true, true -> "<'TContext, 'TReturn>"
+        | true, false -> "<'TContext>"
+        | false, true -> "<'TReturn>"
         | false, false -> ""
-      w.StartWrite <| sprintf "public class %s%s " (klass.name) typeArgStr
-      using (w.block()) <| fun _ ->
-        w.StartWrite "public static class Builders"
-        using (w.block()) <| fun _ -> 
-          for k in klass.routeKlasses do renderRouteBuilder k w 
-      
+      w.StartWriteLine <| sprintf "type %s%s =" (klass.name) typeArgStr
+      using (w.indent()) <| fun _ ->
         match klass.ctor with
         | Some(ctorParams) ->
-          renderMainCtor (klass.name) ctorParams options w
-          renderHandlerCtorParamsIvars ctorParams options w
+          renderRecordValues (klass.name) ctorParams options w
         | None -> failwith "Missing ctor"
         System.Diagnostics.Debug.Print <| sprintf "RouteTree:\n\n%A" routeTree
-        w.Write("\n")
+        w.Write("\n\n")
         renderDispatchMethod routeTree options w
-        renderUtilities w
+        
     w.content.ToString()
-
-//  let buildCSharpCode (options:RouteProviderOptions) =
-//    match runParserOnString RouteParsing.pRoutes () "User routes" (options.routesStr) with
-//    | Success(routes,_, _) ->
-//      let klass = routes2Class routes options
-//      let routeTree = buildRouteTree routes
-//      renderMainClass klass routeTree options
-//    | Failure (msg,_,_) ->
-//      failwithf "Failed to parse routes. Error: %s" msg
-//       
+   
   let compileRoutes (options:RouteCompilationArgs) (output:TextWriter) = 
     let routes = options.parse
     let klass = routes2Class routes options
     let routeTree = buildRouteTree routes
     let code = renderMainClass klass routeTree options
     output.Write(code)
-
-//  let compileRoutes (options:RouteProviderOptions) =
-//    match runParserOnString RouteParsing.pRoutes () "User routes" (options.routesStr) with
-//    | ParserResult.Success(routes,_, _) ->
-//      let klass = routes2Class routes options
-//      let routeTree = buildRouteTree routes
-//      let code = renderMainClass klass routeTree options
-//    
-//      let dllFile = System.IO.Path.GetTempFileName()
-//      let compilerArgs =  dict [("CompilerVersion", "v4.0")]
-//      let compiler = new Microsoft.CSharp.CSharpCodeProvider(compilerArgs)
-//    
-//      let parameters = new System.CodeDom.Compiler.CompilerParameters([|"mscorlib.dll"; "System.Core.dll"; "System.dll"|])
-//      parameters.TreatWarningsAsErrors <- true
-//
-//      if options.inputTypeName.IsSome || options.returnTypeName.IsSome then
-//        options.config |> Option.iter (fun config ->
-//          for r in config.ReferencedAssemblies do
-//            if Path.GetFileName(r) <> "RouteProvider.dll" then
-//              Debug.Print <| sprintf "Added ref \"%s\"" r
-//              parameters.ReferencedAssemblies.Add(r) |> ignore)
-//
-//      parameters.OutputAssembly <- dllFile
-//      parameters.CompilerOptions <- "/t:library"
-//      let compilerResults = compiler.CompileAssemblyFromSource(parameters, [| code |])
-//      if compilerResults.Errors.HasErrors then
-//        let errors = seq { for err in compilerResults.Errors do yield err }
-//        failwithf "Got error: %A" (errors |> Seq.head)
-//      else
-//        let asm = System.Reflection.Assembly.LoadFrom(dllFile)
-//        asm.GetType <| "IsakSky." + options.typeName
-//    | ParserResult.Failure (msg,_,_) ->
-//      failwithf "Failed to parse routes. Error: %s" msg
