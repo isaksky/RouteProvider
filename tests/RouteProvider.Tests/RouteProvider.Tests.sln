@@ -1,4 +1,3 @@
-
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.23107.0
@@ -13,11 +12,23 @@ EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
+		DebugOwin|Any CPU = DebugOwin|Any CPU
+		DebugProjTools|Any CPU = DebugProjTools|Any CPU
+		DebugSpit|Any CPU = DebugSpit|Any CPU
+		DebugSystemWebReturnType|Any CPU = DebugSystemWebReturnType|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{3CF9ADF0-DAC9-451C-A0BC-1302C592E292}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{3CF9ADF0-DAC9-451C-A0BC-1302C592E292}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3CF9ADF0-DAC9-451C-A0BC-1302C592E292}.DebugOwin|Any CPU.ActiveCfg = Debug|Any CPU
+		{3CF9ADF0-DAC9-451C-A0BC-1302C592E292}.DebugOwin|Any CPU.Build.0 = Debug|Any CPU
+		{3CF9ADF0-DAC9-451C-A0BC-1302C592E292}.DebugProjTools|Any CPU.ActiveCfg = Debug|Any CPU
+		{3CF9ADF0-DAC9-451C-A0BC-1302C592E292}.DebugProjTools|Any CPU.Build.0 = Debug|Any CPU
+		{3CF9ADF0-DAC9-451C-A0BC-1302C592E292}.DebugSpit|Any CPU.ActiveCfg = Debug|Any CPU
+		{3CF9ADF0-DAC9-451C-A0BC-1302C592E292}.DebugSpit|Any CPU.Build.0 = Debug|Any CPU
+		{3CF9ADF0-DAC9-451C-A0BC-1302C592E292}.DebugSystemWebReturnType|Any CPU.ActiveCfg = Debug|Any CPU
+		{3CF9ADF0-DAC9-451C-A0BC-1302C592E292}.DebugSystemWebReturnType|Any CPU.Build.0 = Debug|Any CPU
 		{3CF9ADF0-DAC9-451C-A0BC-1302C592E292}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3CF9ADF0-DAC9-451C-A0BC-1302C592E292}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection

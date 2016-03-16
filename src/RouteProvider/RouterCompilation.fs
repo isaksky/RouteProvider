@@ -8,6 +8,7 @@ open Microsoft.FSharp.Collections
 open System.Collections.Generic
 open System.Diagnostics
 open System.IO
+open System.Reflection
 open Microsoft.FSharp.Compiler.SimpleSourceCodeServices
 
 module RouteCompilation =
@@ -93,6 +94,7 @@ module RouteCompilation =
 
   type FSharpWriter (indentSize:int) =
     let mutable indentation = 0
+    let mutable lastNewLine = false
     member val IndentSize = indentSize with get
     member val content = new StringBuilder() with get
     member x.IncIndent () =
@@ -107,13 +109,23 @@ module RouteCompilation =
     member x.StartWriteLine(line: string) = 
       let pfx = new string(' ', indentation)
       let s = sprintf "%s%s\n" pfx line
+      if s.Length > 0 then
+        lastNewLine <- s.[s.Length - 1] = '\n'
       x.content.Append(s) |> ignore
     member x.StartWrite(str:string) =
       let pfx = new string(' ', indentation)
       let s = sprintf "%s%s" pfx str
+      if str.Length > 0 then
+        lastNewLine <- str.[str.Length - 1] = '\n'
       x.content.Append(s) |> ignore
     member x.Write(str:string) =
+      if str.Length > 0 then
+        lastNewLine <- str.[str.Length - 1] = '\n'
       x.content.Append(str) |> ignore
+    member x.Newline() =
+      if not lastNewLine then 
+        x.Write("\n")
+        lastNewLine <- true
 
   let idVal = new FParsec.IdentifierValidator()
 
@@ -223,19 +235,20 @@ module RouteCompilation =
   and Endpoint = 
     { verb: string; handlerName: string }
 
-  let rec buildNode (route:Route) (segsRemaining: NamedRouteSegment list) (depth: int) =
+  let routeEndPoint (route:Route) = 
+    { verb = route.verb; handlerName = (handlerName route)}
+
+  let rec buildNode (endPoint:Endpoint) (segsRemaining: NamedRouteSegment list) (depth: int) =
     match segsRemaining with
     | [] -> 
-      let endPoint = { verb = route.verb; handlerName = (handlerName route)}
       { endPoints = [endPoint]; children = []; depth = depth }
     | seg::segs ->
-      let child = seg, (buildNode route segs (depth + 1))
+      let child = seg, (buildNode endPoint segs (depth + 1))
       { endPoints = []; children = [child]; depth = depth }
 
-  let rec addRoute (routeNode:RouteNode) (route:Route) (segsRemaining: NamedRouteSegment list) (depth: int) =
+  let rec addRoute (routeNode:RouteNode) (endPoint:Endpoint) (segsRemaining: NamedRouteSegment list) (depth: int) =
     match segsRemaining with
     | [] ->
-      let endPoint = { verb = route.verb; handlerName = (handlerName route)}
       { routeNode with endPoints = routeNode.endPoints @ [endPoint] }
     | seg::segs ->
       let existingChild = 
@@ -243,7 +256,7 @@ module RouteCompilation =
         |> Seq.tryFind (fun (s, _) -> s = seg)
       match existingChild with
       | None -> 
-        let newChild = seg, buildNode route segs (depth + 1)
+        let newChild = seg, buildNode endPoint segs (depth + 1)
         { routeNode with children = routeNode.children @ [newChild]}
       | Some(existingChild) ->
         let updatedChildren =
@@ -251,7 +264,7 @@ module RouteCompilation =
           |> List.map (fun child -> 
             if child = existingChild then
               let seg, routeNode = child
-              (seg, (addRoute routeNode route segs (depth + 1)))
+              (seg, (addRoute routeNode endPoint segs (depth + 1)))
             else
               child) 
         { routeNode with children = updatedChildren }   
@@ -260,294 +273,250 @@ module RouteCompilation =
     let rec addRouteF routeNode routes =
       match routes with
       | route :: routes ->
-        let updatedRouteNode = addRoute routeNode route (route.routeSegments) 0
+        let updatedRouteNode = addRoute routeNode (routeEndPoint route) (route.routeSegments) 0
         addRouteF updatedRouteNode routes
       | [] ->
         routeNode
 
     addRouteF (RouteNode.Empty()) routes
 
-  type FlatRouteMember =
-    | NamedRouteSegment of NamedRouteSegment
-    | Endpoint of Endpoint
-
-  type Mappings = 
-    { int64s: (NamedRouteSegment * RouteNode) list
-      ints: (NamedRouteSegment * RouteNode) list 
-      strs: (NamedRouteSegment * RouteNode) list }
-    static member Empty () =
-      { int64s = []; ints = []; strs = [] }
-
-  let addSeg mappings pair = 
-    let seg, _ = pair
-    match seg with
-    | Int64Seg(_) ->
-      { mappings with int64s = pair :: mappings.int64s}
-    | IntSeg(_) -> 
-      { mappings with ints = pair :: mappings.ints}
-    | StringSeg(_) ->
-      { mappings with strs = pair :: mappings.strs}
-    | _ -> failwith "Logic error"
-
-  let addMapping (m:Map<string, Mappings>) (k:string) (pair:NamedRouteSegment * RouteNode) : Map<string, Mappings> = 
-    match Map.tryFind k m with
-    | Some(mappings) ->
-        Map.add k (addSeg mappings pair) m
-    | None -> 
-      let mappings = Mappings.Empty()
-      Map.add k (addSeg mappings pair) m
-
-  let flattenRouteTree (routeTree:RouteNode) : FlatRouteMember list seq =
-    let rec walkAux (routeTree:RouteNode) depth =
-      seq {
-        for e in routeTree.endPoints do
-          yield [Endpoint(e)]
-
-        let rec group (children:(NamedRouteSegment * RouteNode) list) constants mappings =
-          match children with
-          | (seg, _) as c :: children -> 
-            let constants, mappings = 
-              match seg with
-              | ConstantSeg(_) ->
-                c :: constants, mappings
-              | Int64Seg(name) | IntSeg(name) | StringSeg(name) ->
-                let mappings = addMapping mappings name c
-                constants, mappings
-            group children constants mappings
-          | [] -> 
-            constants, mappings
-
-        let constants, mappingsMap = group (routeTree.children) [] Map.empty
-
-        for KeyValue(_, mappings) in mappingsMap do
-          let nodes = 
-            [mappings.int64s; mappings.ints; mappings.strs] 
-            |> List.map List.rev 
-            |> List.concat 
-            |> Array.ofList
-          for idx in [0..nodes.Length - 1] do
-            let seg, child = nodes.[idx]
-            let seg =
-              match mappingsMap.Count with
-              | 1 -> seg
-              | _ ->
-                match seg with
-                | Int64Seg(_) -> Int64Seg(sprintf "int64Arg_%d_%d" depth idx)
-                | IntSeg(_) -> IntSeg(sprintf "intArg%d_%d" depth idx)
-                | StringSeg(_) -> StringSeg(sprintf "strArg_%d_%d" depth idx)
-                | _ -> failwith "Logic error"
-
-            yield! (walkAux child (depth + 1)) |> Seq.map (fun n -> NamedRouteSegment(seg) :: n) 
-        
-        for seg, child in constants do
-          yield! (walkAux child (depth + 1)) |> Seq.map (fun n -> NamedRouteSegment(seg) :: n)
-      }
-    walkAux routeTree 0
-
-  type RouteTreeFragment = 
-    { head: FlatRouteMember
-      children : RouteTreeFragment list}
-
-  let groupRoutes (flatRoutes: FlatRouteMember list seq) : (int * RouteTreeFragment list) list =
-    let rec addFlatRoute (memo: RouteTreeFragment list) (flatroute:FlatRouteMember list)  =
-      match flatroute with
-      | [] -> memo
-      | seg::segs ->
-        match memo |> List.tryFind (fun t -> t.head = seg) with
-        | Some(t) ->
-          let newChildren = addFlatRoute (t.children) segs
-          memo |> List.map (fun t2 -> 
-            if t2 = t then
-              { t with children = newChildren }
-            else
-              t2)
-        | None ->
-          let t = { head = seg; children = (addFlatRoute [] segs)}
-          memo @ [t]
-      
-    flatRoutes 
-    |> Seq.groupBy (fun s -> Seq.length s - 1)
-    |> Seq.map (fun (n, rs) -> n, (rs |> Seq.fold addFlatRoute []) )
-    |> List.ofSeq
-
-  type RouteIfTest = 
-    { partIdx: int option
-      seg: FlatRouteMember
-      children: RouteIfTest list }
-
-  let rec route2If (route: RouteTreeFragment) (idx:int) : RouteIfTest =
-    match route.head with
-      | NamedRouteSegment(_) as seg ->
-        match route.children with
-        | [] ->
-          { partIdx = Some(idx); seg = seg; children = [] }
-        | children ->
-          let childIfs = 
-            children 
-            |> List.map (fun c -> route2If c (idx + 1)) 
-            |> List.rev
-          { partIdx = Some(idx); seg = seg; children = childIfs }
-      | Endpoint(_) as endpoint ->
-        // Don't need to worry about children here, because it isn't possible with the way we group routes
-        { partIdx = None; seg = endpoint; children = [] }
-
-  type ConditionNode = 
-    { preConditionCheck: string option
-      assignment: string option
-      body: RouteConditionBody }
-  and RouteConditionBody =
-  | Choices of ConditionNode list
-  | Body of string
-
-  let renderCatch (options:RouteCompilationArgs) (w:FSharpWriter) =
-    w.StartWriteLine <| "match this.notFound with"
-    w.StartWriteLine <| "| None -> raise (Internal.RouteNotMatchedException (verb, path))"
-    //if (this.notFound == null) { throw new RouteNotMatchedException(verb, path); }"
+  let renderNotFoundCall (options:RouteCompilationArgs) (w:FSharpWriter) =
     let notFoundArgs' = ["verb"; "path"]
     let notFoundArgs = if options.inputType then "context" :: notFoundArgs' else notFoundArgs'
-    let notFoundArgsStr = notFoundArgs |> String.concat " "
-    //let retStr = if options.returnType then "return " else ""
-    w.StartWriteLine <| sprintf "| Some(notFound) -> notFound %s" notFoundArgsStr
+    let notFoundArgsStr = notFoundArgs |> String.concat ", "
+    w.Write <| sprintf "this.HandleNotFound(%s)\n" notFoundArgsStr
 
-  let if2Cond (routeIf:RouteIfTest) (options:RouteCompilationArgs) : ConditionNode = 
-    let rec renderIfAux (routeIf:RouteIfTest) (precedingSegs:NamedRouteSegment list) (depth:int) =
-      match routeIf.seg with
-      | NamedRouteSegment(seg) ->
-        let idx = routeIf.partIdx.Value
-        match seg with 
-        | ConstantSeg(name) ->
-          { preConditionCheck = Some(sprintf "parts.[start + %d] = \"%s\"" idx name)
-            assignment = None
-            body = routeIf.children |> List.map (fun child -> 
-              renderIfAux child (seg :: precedingSegs) (depth + 1)) |> Choices }
-        | StringSeg(name) ->
-          { preConditionCheck = None
-            assignment = Some(sprintf "let %s = parts.[start + %d]" name idx)
-            body = routeIf.children |> List.map (fun child ->
-              renderIfAux child (seg :: precedingSegs) (depth + 1)) |> Choices }
-        | Int64Seg(name)
-        | IntSeg(name) ->
-          let tname = 
-            match seg with
-            | IntSeg(_) -> "Int32"
-            | Int64Seg(_) -> "Int64"
-            | _ -> failwith "Logic error"
+  let renderNotFoundHandler (options:RouteCompilationArgs) (w:FSharpWriter) =
+    let notFoundArgs' = ["verb"; "path"]
+    let notFoundArgs = if options.inputType then "context" :: notFoundArgs' else notFoundArgs'
+    let argStr = notFoundArgs |> String.concat ", "
+    w.StartWriteLine <| sprintf "member inline private this.HandleNotFound(%s) =" argStr
+    
+    using (w.indent()) <| fun _ ->
+      w.StartWriteLine <| "match this.notFound with"
+      w.StartWriteLine <| "| None -> raise (Internal.RouteNotMatchedException (verb, path))"
+      let notFoundArgsStr = notFoundArgs |> String.concat " "
+      w.StartWriteLine <| sprintf "| Some(notFound) -> notFound %s" notFoundArgsStr
 
-          { preConditionCheck = Some(sprintf "Internal.stringIsAllDigits(parts.[start + %d])" idx)
-            assignment = Some(sprintf "let %s = %s.Parse(parts.[start + %d])" name tname idx)
-            body = routeIf.children |> List.map (fun child ->
-              renderIfAux child (seg :: precedingSegs) (depth + 1)) |> Choices }
-      | Endpoint(endpoint) ->
-        let dynArgs = 
-          precedingSegs 
-          |> List.rev 
-          |> List.choose (function
-            | Int64Seg(n) | IntSeg(n) | StringSeg(n) -> Some(n) 
-            | ConstantSeg(_) -> None)
+  let getBranches (routeTree:RouteNode) : (NamedRouteSegment list * Endpoint) seq =
+    let rec getBranches' (routeTree:RouteNode) (preSegs : NamedRouteSegment list) = 
+      seq {
+        for endP in routeTree.endPoints do
+          yield (List.rev preSegs), endP
 
-        let args = 
-          if options.inputType then "context" :: dynArgs
-          else dynArgs
+        for seg, subTree in routeTree.children do
+          yield! (getBranches' subTree (seg::preSegs))      
+      }
+    getBranches' routeTree []
 
-        let handlerCall =
-          sprintf "this.%s %s" (endpoint.handlerName) (args |> String.concat " ")
-        { preConditionCheck = Some(sprintf "verb = \"%s\"" (endpoint.verb))
-          assignment = None
-          body = Body(handlerCall) }
-    renderIfAux routeIf [] 0
+  let captureEq (seg1:NamedRouteSegment) (seg2:NamedRouteSegment) =
+    match seg1, seg2 with
+    | ConstantSeg(a), ConstantSeg(b) when a = b -> true
+    | Int64Seg(_), Int64Seg(_) -> true
+    | IntSeg(_), IntSeg(_) -> true
+    | StringSeg(_), StringSeg(_) -> true
+    | _ -> false
 
-  let rec renderRouteConds (routeConds: ConditionNode list) (options: RouteCompilationArgs) (w:FSharpWriter) =
-    match routeConds with
-    | [] -> failwith "Logic error"
-    | [cond] ->
-      match cond.preConditionCheck with
-      | Some(check) ->
-        w.StartWrite <| sprintf "if %s then (* ho *) " check
-        w.Write("\n")
-        using (w.indent()) <| fun _ ->
-          cond.assignment |> Option.iter (fun assig -> w.StartWriteLine assig)  
-          renderRouteCondsBody (cond.body) options w
-        w.Write("\n")
-        w.StartWriteLine("else")    
-        using (w.indent()) <| fun _ ->
-          renderCatch options w
+  let genericSeg (seg:NamedRouteSegment) (depth:int) =
+    match seg with
+    | Int64Seg(_) -> Int64Seg(sprintf "int64ArgDepth_%d" depth)
+    | IntSeg(_) -> IntSeg(sprintf "intArgDepth_%d" depth)
+    | StringSeg(_) -> StringSeg(sprintf "stringArgDepth_%d" depth)
+    | _ -> failwith "Logic error"
+
+  let groupNodesByLength (routeTree:RouteNode) : (int * RouteNode) list =
+    let rec addG (routeTree:RouteNode) (segs:NamedRouteSegment list, endpoint:Endpoint) =
+      match segs with
+      | [] ->
+        { routeTree with endPoints = endpoint :: routeTree.endPoints }
+      | seg::segs ->
+        match routeTree.children |> List.tryFindIndex(fun (seg2, _) -> captureEq seg seg2) with
+        | Some(idx) ->
+          let seg2, existingChild = routeTree.children |> List.item idx 
+
+          // Might need to make variable name generic, if we have multiple routes that capture the
+          // same type and position with diff variable names
+          let newSeg =
+            if seg = seg2 then seg
+            else genericSeg seg (routeTree.depth)
+
+          let updatedChild = addG existingChild (segs, endpoint)
+          let updatedChildren =
+            routeTree.children
+            |> List.mapi(fun i child ->
+              if i = idx then (newSeg, updatedChild) else child)
+          { routeTree with children = updatedChildren }
+        | None ->
+          { routeTree with children = (seg, buildRouteNode(routeTree.depth + 1, segs, endpoint)) :: routeTree.children }
+    and buildRouteNode (startDepth: int, segs:NamedRouteSegment list, endpoint:Endpoint) =
+      segs
+      |> List.rev
+      |> List.fold
+        (fun node seg -> 
+          Utility.log "node: %A depth: %d" node (node.depth - 1)
+          { children = [seg, node]; endPoints = []; depth = node.depth - 1})
+        { children = []; endPoints = [endpoint]; depth = startDepth + segs.Length}
+    
+    let addTree (treeGroups: (int * RouteNode) list) (len:int, routeParts) : (int * RouteNode) list =
+      match treeGroups |> List.tryFindIndex (fun (n, _) -> n = len) with
+      | Some(idx) ->
+        let _, node = Seq.item idx treeGroups 
+        let updatedNode = addG node routeParts
+        treeGroups
+        |> List.mapi (fun i (n, node) -> 
+          if i = idx then
+            len, updatedNode
+          else
+            n, node)
       | None -> 
-        cond.assignment |> Option.iter (fun assig -> w.StartWriteLine assig)  
-        renderRouteCondsBody (cond.body) options w    
-    | _ ->
-      let mutable lastElse = false
-      routeConds |> List.iteri (fun i cond ->
-        let keyword = 
-          if cond.preConditionCheck.IsSome then
-            if i = 0 then "if" else "elif"
-          else "else"
-        let thenS = if keyword = "else" then "" else "then (* hi *)"
-        w.StartWrite <| keyword + " "
-        match cond.preConditionCheck with
-        | Some(check) ->
-          w.Write <| sprintf "%s %s\n" check thenS
-        | None -> w.Write "\n"
-        
-        using (w.indent()) <| fun _ ->
-          cond.assignment |> Option.iter (fun s -> w.StartWriteLine s)
-          renderRouteCondsBody (cond.body) options w
-        w.Write("\n")
-        
-        if keyword = "else" then lastElse <- true)
-      if not lastElse then
-        w.StartWriteLine("else")
-        using (w.indent()) <| fun _ -> renderCatch options w          
-  and bodyIndent body =
-    match body with 
-    | Choices(_) -> true 
-    | Body(_) -> false
-  and renderRouteCondsBody body (options: RouteCompilationArgs) (w:FSharpWriter) =
-    match body with
-    | Choices(choices) ->
-      renderRouteConds choices options w 
-    | Body(s) ->
-      let doIndent = bodyIndent body
-      if doIndent then w.Write(s) else w.StartWrite(s)
+        let segs, endP = routeParts
+        let newNode = buildRouteNode (0, segs, endP)
+        (len, newNode) :: treeGroups
 
-  let renderRouteGroupMatchTest (group:RouteTreeFragment list) (options:RouteCompilationArgs) (w:FSharpWriter) =
-    Debug.Print <| sprintf "Group:\n%A" group
-    let routeConds = 
-      group
-      |> List.map (fun route -> route2If route 0)
-      |> List.map (fun IF -> if2Cond IF options)
+    routeTree
+    |> getBranches
+    |> Seq.fold 
+      (fun acc routeParts -> 
+        let segs, _ = routeParts
+        let n = List.length segs
+        addTree acc (n, routeParts))
+      []
 
-    Debug.Print <| sprintf "RouteConds:\n%A" routeConds
-    renderRouteConds routeConds options w
+  let inline dbgComment a (w:FSharpWriter) =
+    let pprint = sprintf "%A" a
+    for line in pprint.Split([|"\r\n"; "\n" |], StringSplitOptions.None) do
+      w.StartWriteLine <| sprintf "// %s" line
 
-  let renderDispatchMethod (routeTree:RouteNode) (options:RouteCompilationArgs) (w:FSharpWriter) =
-    let routeGroups = routeTree |> flattenRouteTree |> groupRoutes
+  let segScore = function
+    | ConstantSeg(_) -> 10
+    | Int64Seg(_) -> 20
+    | IntSeg(_) -> 30
+    | StringSeg(_) -> 40
 
-    let baseArgs = ["(verb:string)"; "(path:string)"]
+  let noOptDisp =
+    { new System.IDisposable with 
+          member y.Dispose() = () }
+
+  let renderSegmentTests (seg:NamedRouteSegment) (scope:DynamicParam list) (isFirst:bool) (depth:int) (_:RouteCompilationArgs) (w:FSharpWriter) =
+    match seg with
+    | ConstantSeg(name) ->
+      let kwd = if isFirst then "if" else "elif"
+      w.StartWriteLine <| sprintf "%s String.Equals(parts.[%d + start],\"%s\") then" kwd depth name
+      scope, w.indent()
+    | Int64Seg(name) -> 
+      let kwd = if isFirst then "if" else "elif"
+      w.StartWriteLine <| sprintf "%s Int64.TryParse(parts.[%d + start], &%s) then" kwd depth name
+      Int64Param(name) :: scope, w.indent()
+    | IntSeg(name) -> 
+      let kwd = if isFirst then "if" else "elif"
+      w.StartWriteLine <| sprintf "%s Int32.TryParse(parts.[%d + start], &%s) then" kwd depth name
+      IntParam(name) :: scope, w.indent()
+    | StringSeg(name) ->
+      if isFirst then
+        w.StartWriteLine <| sprintf "let %s = parts.[%d + start]" name depth
+        StringParam(name)::scope, noOptDisp
+      else
+        w.StartWriteLine "else"
+        let writerScope = w.indent()
+        w.StartWriteLine <| sprintf "let %s = parts.[%d + start]" name depth
+        StringParam(name)::scope, writerScope
+
+  let rec renderRouteNodeCondTree (routeTree:RouteNode) (scope:DynamicParam list) (options:RouteCompilationArgs) (w:FSharpWriter) =
+    //dbgComment routeTree w
+    match routeTree.endPoints, routeTree.children with
+    | [], [] -> failwith "Logic error"
+    | endPoints, [] ->
+      let argStr = 
+        scope 
+        |> List.rev 
+        |> List.map (function 
+          | Int64Param(name)
+          | IntParam(name)
+          | StringParam(name) -> name)
+        |> String.concat " "
+
+      let numEndPoints = List.length endPoints
+      endPoints |> List.iteri(fun i endP ->
+        let keyword = if i = 0 then "if" else "elif"                
+        w.StartWriteLine <| sprintf "%s verb = \"%s\" then this.%s %s" keyword (endP.verb) (endP.handlerName) argStr
+        let isLast = i = numEndPoints - 1
+        if isLast then 
+          w.StartWrite <| "else "
+          renderNotFoundCall options w
+          w.Newline())
+    | [], children ->
+      let children = children |> List.sortBy (fst >> segScore)
+      
+      // declare vars for TryParse methods to use
+      for cseg, _ in children do
+        match cseg with 
+        | Int64Seg(name) -> 
+          w.StartWriteLine <| sprintf "let mutable %s = 0L" name
+        | IntSeg(name) -> 
+          w.StartWriteLine <| sprintf "let mutable %s = 0" name
+        | StringSeg(_)
+        | ConstantSeg(_) -> ()
+
+      let numChildren = List.length children
+      children
+      |> List.iteri (fun i (seg, child) ->   
+        let isFirst = i = 0
+           
+        let newScope, writerScope = renderSegmentTests seg scope isFirst (routeTree.depth) options w
+        using writerScope <| fun _ ->
+          renderRouteNodeCondTree child newScope options w
+          
+        let isLast = i = numChildren - 1
+        let isStringSeg = match seg with | StringSeg(_) -> true | _ -> false
+        if isLast && not (isStringSeg) then
+          w.StartWrite "else "
+          renderNotFoundCall options w)
+
+    | _ -> failwith "Logic error"
+    //w.StartWriteLine <| sprintf "%A" routeTree
+
+  let renderDispatchMethods (routeTree:RouteNode) (options:RouteCompilationArgs) (w:FSharpWriter) =
+    //let routeGroups = routeTree |> flattenRouteTree |> groupRoutes
+    let nodesWithLength = groupNodesByLength routeTree
+
+    let baseArgs = ["verb:string"; "path:string"]
 
     let args = 
-      if options.inputType then "(context:'TContext)" :: baseArgs
+      if options.inputType then "context:'TContext" :: baseArgs
       else baseArgs
 
     let retTp =
       if options.returnType then "'TReturn"
       else "unit"
     
-    let argsStr = args |> String.concat " "
-    w.StartWriteLine <| sprintf "member this.DispatchRoute %s : %s =" argsStr retTp 
+    let argsStr = args |> String.concat ", "
+    w.StartWriteLine <| sprintf "member this.DispatchRoute(%s) : %s =" argsStr retTp 
     using (w.indent()) (fun _ ->
       w.StartWriteLine <| "let parts = path.Split('/')"
       // Normalize starting and ending slash
       w.StartWriteLine <| "let start = if parts.[0] = \"\" then 1 else 0"
       w.StartWriteLine <| "let endOffset = if parts.Length > 0 && parts.[parts.Length - 1] = \"\" then 1 else 0"
       w.StartWriteLine <| "match parts.Length - start - endOffset with"
-      for n, group in routeGroups do
+      for n, node in nodesWithLength do
+        dbgComment node w
         w.StartWriteLine <| sprintf "| %d ->" n
         using (w.indent()) (fun _ ->
-          renderRouteGroupMatchTest group options w)
+          renderRouteNodeCondTree node [] options w)
       w.StartWriteLine <| "| _ ->"
       using (w.indent()) <| fun _ ->
-        renderCatch options w)  
-      
+        w.StartWrite("") // for the not found call below
+        renderNotFoundCall options w)
+    
+    let args2 = Array.ofList args
+    args2.[args2.Length - 1] <- "uri:Uri"
+    let argsStr2 = args2 |> String.concat ", "
+    w.Write("\n")
+    w.StartWriteLine <| sprintf "member this.DispatchRoute(%s) : %s =" argsStr2 retTp
+    using (w.indent()) <| fun _ ->
+      w.StartWriteLine "// Ensure we have an Absolute Uri, or just about every method on Uri chokes"
+      w.StartWriteLine "let uri = if uri.IsAbsoluteUri then uri else new Uri(Internal.fakeBaseUri, uri)"
+      w.StartWriteLine "let path = uri.GetComponents(UriComponents.Path, UriFormat.Unescaped)"
+      w.StartWriteLine "this.DispatchRoute(verb, path)"
 
   let digitCheckFn = """
   let stringIsAllDigits (s:string) =
@@ -574,14 +543,20 @@ module RouteCompilation =
   let renderUtilities (w:FSharpWriter) = 
     w.StartWriteLine "module Internal ="
     using (w.indent()) <| fun _ ->
-      renderMultiLineStr w digitCheckFn 
+      //renderMultiLineStr w digitCheckFn 
+      //w.Write("\n")
+      w.StartWriteLine("let fakeBaseUri = new Uri(\"http://a.a\")")
+      w.Write("\n")
       renderMultiLineStr w routeNotMatchedEx
 
   let renderMainClass (klass:RouterKlass) (routeTree:RouteNode) (options:RouteCompilationArgs) =
     let w = new FSharpWriter(2)
+    let version = Assembly.GetExecutingAssembly().GetName().Version.ToString()
+    w.StartWriteLine <| sprintf "// Generated by RouteProvider %s" version
     w.StartWriteLine <| sprintf "namespace %s" (defaultArg options.nameSpace "IsakSky")
+    w.Write("\n")
     w.StartWriteLine "open System"
-    w.StartWriteLine <| sprintf "module %s =" (defaultArg options.moduleName "RouteProvider")
+    w.StartWriteLine <| sprintf "module %s =" (defaultArg options.moduleName "Provided")
     using (w.indent()) <| fun _ ->
       for k in klass.routeKlasses do renderRouteBuilder k w
       
@@ -595,7 +570,7 @@ module RouteCompilation =
         | true, false -> "<'TContext>"
         | false, true -> "<'TReturn>"
         | false, false -> ""
-      w.StartWriteLine <| sprintf "type %s%s =" (klass.name) typeArgStr
+      w.StartWriteLine <| sprintf "type %s2%s =" (klass.name) typeArgStr
       using (w.indent()) <| fun _ ->
         match klass.ctor with
         | Some(ctorParams) ->
@@ -603,7 +578,9 @@ module RouteCompilation =
         | None -> failwith "Missing ctor"
         System.Diagnostics.Debug.Print <| sprintf "RouteTree:\n\n%A" routeTree
         w.Write("\n\n")
-        renderDispatchMethod routeTree options w
+        renderNotFoundHandler options w
+        w.Write("\n")
+        renderDispatchMethods routeTree options w
         
     w.content.ToString()
    

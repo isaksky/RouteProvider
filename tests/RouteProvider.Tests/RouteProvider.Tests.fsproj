@@ -67,7 +67,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="RouteProvider">
-      <HintPath>..\..\src\RouteProvider\bin\Release\RouteProvider.dll</HintPath>
+      <HintPath>..\..\src\RouteProvider\bin\Debug\RouteProvider.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

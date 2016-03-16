@@ -32,59 +32,11 @@ type EmitterState = {
   lastWrote: DateTime
 }
 
-//module RouteEmitterUtils =
-//  type OutputFileCheck = 
-//  | Exists 
-//  | Ok 
-//  | BadExtension
-//  | NotFoundOnDiskOrFile
-//
-//  let getSourceTokens sourceFile = 
-//    let sourceTok = FSharpSourceTokenizer([], sourceFile)
-//    seq {
-//      for line in File.ReadLines(sourceFile) do
-//        let lineTok = sourceTok.CreateLineTokenizer(line)
-//        let stop = ref false
-//        let tokState = ref 0L
-//        while not !stop do
-//          match lineTok.ScanToken(!tokState) with
-//          | Some tok, state -> 
-//            tokState := state
-//            yield line, tok            
-//          | None, _ -> stop := true          
-//    }
-//
-//  let referencesFile (line:string) (tok:FSharpTokenInfo) (filename:string) = 
-//    if tok.TokenName = "STRING_TEXT" then
-//      let matchIdx = line.IndexOf(filename, tok.LeftColumn, tok.RightColumn - tok.LeftColumn, StringComparison.InvariantCulture)
-//      matchIdx <> -1
-//    else false
-//
-//  let doesSourceMentionOutputFile (sourceFile:string) (outputFile:string) =
-//    let filename = Path.GetFileName(outputFile)
-//    sourceFile
-//    |> getSourceTokens
-//    |> Seq.exists (fun (line, tok) -> referencesFile line tok filename)
-//
-//  let checkOutputFile (sourceFile:string) (outputFile:string) =
-//    if not <| outputFile.EndsWith(".cs") && not <| outputFile.EndsWith(".dll") then
-//      BadExtension
-//    elif File.Exists(outputFile) then
-//      Exists
-//    else
-//      // We need to create it, but only do that if the source file that is on disk
-//      // mentions the filename. This can prevent creating tons of files if the user
-//      // is currently typing the filename.
-//      if doesSourceMentionOutputFile sourceFile outputFile then
-//        Ok
-//      else 
-//        NotFoundOnDiskOrFile
-
 module RouterEmitterUtils =
   let fileIsGeneratedOrEmpty (file:FileStream) =
     if file.Length = 0L then true
     else
-      use reader = new StreamReader(file)
+      let reader = new StreamReader(file)
       let mutable allWhitespace  = true
       let mutable foundGenComment = false
       while not foundGenComment && not (reader.EndOfStream) do
@@ -137,7 +89,8 @@ type RouterEmitter(outputPath : string) =
         match msg with
         | None ->
           expire.Trigger(this, new EventArgs())
-          return ()
+          do! Async.Sleep waitIncr
+          return! loop (numSkipped, waited + waitIncr)
         | Some(Enqueue(args, replyChan)) ->
           if waited < maxWait then do! Async.Sleep waitIncr
           if waited < maxWait && inbox.CurrentQueueLength > 0 then
@@ -169,53 +122,9 @@ type RouterEmitter(outputPath : string) =
     loop (0, 0))
 
   member this.PostMessage(args:RouterEmissionArgs) =
+    //this.Mail.PostAndReply(fun chan -> Enqueue(args, chan))
     this.Mail.PostAndReply(fun chan -> Enqueue(args, chan))
   
   [<CLIEvent>]
   member this.Expired =
     expire.Publish
-
-//  member this.Scan() =
-//    let rec scanDir dir (fsFiles:ResizeArray<_>) (projFiles:ResizeArray<_>) (scriptFiles:ResizeArray<_>) =
-//      for f in Directory.EnumerateFiles(dir, "*", SearchOption.TopDirectoryOnly) do
-//        if f.EndsWith(".fsproj") then
-//          projFiles.Add(f)
-//        elif f.EndsWith(".fs") then
-//          fsFiles.Add(f)
-//        elif f.EndsWith(".fsx") then
-//          scriptFiles.Add(f)
-//
-//      for d in Directory.EnumerateDirectories(dir, "*", SearchOption.TopDirectoryOnly) do
-//        if d <> "bin" && d <> "obj" then scanDir d fsFiles projFiles scriptFiles
-//
-//    let fsFiles = ResizeArray<_>()
-//    let projFiles = ResizeArray<_>()
-//    let scriptFiles = ResizeArray<_>()
-//    let scanPath = cfg.config.Value.ResolutionFolder
-//    scanDir scanPath fsFiles projFiles scriptFiles
-//
-//    let projFileContents = ResizeArray<_>()
-//    
-//    let rec findProj
-//
-//
-//    (**
-//      INPUT
-//      OUTPUT
-//
-//    **)
-//
-//    let fs = seq  {
-//      yield! projFiles
-//      yield! scriptFiles
-//      yield! fsFiles
-//    }
-//    ()
-//    
-//
-//  interface System.IDisposable with
-//    member this.Dispose() = ()
-    
-
-
-

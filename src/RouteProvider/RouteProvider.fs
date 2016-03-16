@@ -167,7 +167,7 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
           | IgnoredStale -> 
             RouteProviderCore.GetOrCreateFakeAsm(typeName, cfg.TemporaryFolder)
           | IgnoredBadExtension -> 
-            failwith "Bad output file extension. Only *.fs, *.cs, and *.dll supported"
+            failwith "Bad output file extension. Only *.fs supported"
           | RefuseFilenameTaken -> 
             failwithf "Refusing to overwrite file \"%s\". Filename is taken, and does not look generated." resolvedOutputPath
           | Ok | OkSecondaryThread -> 
