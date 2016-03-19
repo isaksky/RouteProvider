@@ -317,6 +317,24 @@ module RouteCompilation =
     | StringSeg(_), StringSeg(_) -> true
     | _ -> false
 
+  let segAssigns (seg:NamedRouteSegment) =
+    match seg with
+    | Int64Seg(_)
+    | IntSeg(_)-> true
+    | _ -> false
+
+  let segName (seg:NamedRouteSegment) =
+    match seg with
+    | Int64Seg(name) 
+    | IntSeg(name)
+    | StringSeg(name)
+    | ConstantSeg(name) -> name
+
+  let assignNameClash (seg1:NamedRouteSegment) (seg2:NamedRouteSegment) =
+    match segAssigns seg1, segAssigns seg2 with
+    | true, true when seg1 <> seg2 && segName(seg1) = segName(seg2) -> true
+    | _ -> false
+
   let genericSeg (seg:NamedRouteSegment) (depth:int) =
     match seg with
     | Int64Seg(_) -> Int64Seg(sprintf "int64ArgDepth_%d" depth)
@@ -324,12 +342,29 @@ module RouteCompilation =
     | StringSeg(_) -> StringSeg(sprintf "stringArgDepth_%d" depth)
     | _ -> failwith "Logic error"
 
+  let resolveNameClashes (seg:NamedRouteSegment) (routeTree:RouteNode) =
+    match routeTree.children |> List.tryFind (fun (seg2, _) -> assignNameClash seg seg2) with
+    | Some(seg2, _) ->
+      let newSeg2 = genericSeg seg2 (routeTree.depth)
+      let newSeg = genericSeg seg (routeTree.depth)
+      let newChildren =
+        routeTree.children
+        |> List.map(fun (tmpSeg, c) ->
+          if Object.ReferenceEquals(tmpSeg, seg2) then
+            newSeg2, c
+          else
+            tmpSeg, c        
+        )
+      newSeg, { routeTree with children = newChildren }
+    | None -> seg, routeTree
+
   let groupNodesByLength (routeTree:RouteNode) : (int * RouteNode) list =
     let rec addG (routeTree:RouteNode) (segs:NamedRouteSegment list, endpoint:Endpoint) =
       match segs with
       | [] ->
         { routeTree with endPoints = endpoint :: routeTree.endPoints }
       | seg::segs ->
+        let seg, routeTree = resolveNameClashes seg routeTree
         match routeTree.children |> List.tryFindIndex(fun (seg2, _) -> captureEq seg seg2) with
         | Some(idx) ->
           let seg2, existingChild = routeTree.children |> List.item idx 
@@ -397,7 +432,8 @@ module RouteCompilation =
     { new System.IDisposable with 
           member y.Dispose() = () }
 
-  let renderSegmentTests (seg:NamedRouteSegment) (scope:DynamicParam list) (isFirst:bool) (depth:int) (_:RouteCompilationArgs) (w:FSharpWriter) =
+  let renderSegmentTests (seg:NamedRouteSegment) (scope:(int * DynamicParam) list) (isFirst:bool) (depth:int) (_:RouteCompilationArgs) (w:FSharpWriter) =
+    // TODO: For final, flatten endpoints
     match seg with
     | ConstantSeg(name) ->
       let kwd = if isFirst then "if" else "elif"
@@ -405,23 +441,21 @@ module RouteCompilation =
       scope, w.indent()
     | Int64Seg(name) -> 
       let kwd = if isFirst then "if" else "elif"
-      w.StartWriteLine <| sprintf "%s Int64.TryParse(parts.[%d + start], &%s) then" kwd depth name
-      Int64Param(name) :: scope, w.indent()
+      w.StartWriteLine <| sprintf "%s Internal.tryParseInt64(parts.[%d + start], &%s_parseState, &%s) then" kwd depth name name
+      (depth, Int64Param(name)) :: scope, w.indent()
     | IntSeg(name) -> 
       let kwd = if isFirst then "if" else "elif"
-      w.StartWriteLine <| sprintf "%s Int32.TryParse(parts.[%d + start], &%s) then" kwd depth name
-      IntParam(name) :: scope, w.indent()
+      w.StartWriteLine <| sprintf "%s Internal.tryParseInt32(parts.[%d + start], &%s_parseState, &%s) then" kwd depth name name
+      (depth, IntParam(name)) :: scope, w.indent()
     | StringSeg(name) ->
       if isFirst then
         w.StartWriteLine <| sprintf "let %s = parts.[%d + start]" name depth
-        StringParam(name)::scope, noOptDisp
+        (depth, StringParam(name))::scope, noOptDisp
       else
         w.StartWriteLine "else"
-        let writerScope = w.indent()
-        w.StartWriteLine <| sprintf "let %s = parts.[%d + start]" name depth
-        StringParam(name)::scope, writerScope
+        (depth, StringParam(name))::scope, w.indent()
 
-  let rec renderRouteNodeCondTree (routeTree:RouteNode) (scope:DynamicParam list) (options:RouteCompilationArgs) (w:FSharpWriter) =
+  let rec renderRouteNodeCondTree (routeTree:RouteNode) (scope:(int * DynamicParam) list) (options:RouteCompilationArgs) (w:FSharpWriter) =
     //dbgComment routeTree w
     match routeTree.endPoints, routeTree.children with
     | [], [] -> failwith "Logic error"
@@ -430,9 +464,9 @@ module RouteCompilation =
         scope 
         |> List.rev 
         |> List.map (function 
-          | Int64Param(name)
-          | IntParam(name)
-          | StringParam(name) -> name)
+          | _, Int64Param(name)
+          | _, IntParam(name) -> name
+          | n, StringParam(_) -> sprintf "(parts.[%d + start])" n)
         |> String.concat " "
 
       let numEndPoints = List.length endPoints
@@ -452,8 +486,10 @@ module RouteCompilation =
         match cseg with 
         | Int64Seg(name) -> 
           w.StartWriteLine <| sprintf "let mutable %s = 0L" name
+          w.StartWriteLine <| sprintf "let mutable %s_parseState = Internal.TryParseState.Untried" name
         | IntSeg(name) -> 
           w.StartWriteLine <| sprintf "let mutable %s = 0" name
+          w.StartWriteLine <| sprintf "let mutable %s_parseState = Internal.TryParseState.Untried" name
         | StringSeg(_)
         | ConstantSeg(_) -> ()
 
@@ -475,9 +511,34 @@ module RouteCompilation =
     | _ -> failwith "Logic error"
     //w.StartWriteLine <| sprintf "%A" routeTree
 
+  // Handle how a path segment being a valid int can prevent it from being used a string
+  let rec resolveBranchOverlap (routeTree:RouteNode) =
+    match routeTree.children with
+    | [] -> routeTree
+    | children -> 
+      match children |> List.tryFind(fun (seg, child) -> match seg with | StringSeg(_) -> true | _ -> false) with
+      | Some(_, strChild) ->
+        let newChildren = 
+          children
+          |> List.map (fun (seg, child) ->
+            match seg with
+            | Int64Seg(_) 
+            | IntSeg(_) ->
+              seg, { child with 
+                      endPoints = child.endPoints @ strChild.endPoints
+                      children = child.children @ strChild.children }
+            | StringSeg(_)
+            | ConstantSeg(_) ->
+              seg, child)
+        { routeTree with children = newChildren |> List.map (fun (seg, child) -> seg, resolveBranchOverlap child)}
+      | None ->
+        { routeTree with children = routeTree.children |> List.map (fun (seg, child) -> seg, resolveBranchOverlap child)}
+
   let renderDispatchMethods (routeTree:RouteNode) (options:RouteCompilationArgs) (w:FSharpWriter) =
-    //let routeGroups = routeTree |> flattenRouteTree |> groupRoutes
-    let nodesWithLength = groupNodesByLength routeTree
+    let nodesWithLength = 
+      routeTree 
+      |> resolveBranchOverlap 
+      |> groupNodesByLength
 
     let baseArgs = ["verb:string"; "path:string"]
 
@@ -518,15 +579,34 @@ module RouteCompilation =
       w.StartWriteLine "let path = uri.GetComponents(UriComponents.Path, UriFormat.Unescaped)"
       w.StartWriteLine "this.DispatchRoute(verb, path)"
 
-  let digitCheckFn = """
-  let stringIsAllDigits (s:string) =
-    let mutable i = 0
-    let mutable foundNonDigit = false
-    while i < s.Length && not foundNonDigit do
-      let c = s.[i]
-      if c < '0' || c > '9' then foundNonDigit <- true
-      i <- i + 1
-    not foundNonDigit
+  let tryParseStateTypeStr = """
+  type TryParseState =
+  | Untried = 0
+  | Success = 1
+  | Failed = 2
+  """
+
+  let tryParseInt32FunStr = """
+  let tryParseInt32 (s:string, parseState: TryParseState byref, result: int byref) =
+    match parseState with
+    | TryParseState.Failed
+    | TryParseState.Success -> ()
+    | _ ->
+      parseState <- match Int32.TryParse(s, &result) with
+      | true -> TryParseState.Success
+      | false -> TryParseState.Failed
+    parseState = TryParseState.Success
+  """
+  let tryParseInt64FunStr = """
+  let tryParseInt64 (s:string, parseState: TryParseState byref, result: int64 byref) =
+    match parseState with
+    | TryParseState.Failed
+    | TryParseState.Success -> ()
+    | _ ->
+      parseState <- match Int64.TryParse(s, &result) with
+      | true -> TryParseState.Success
+      | false -> TryParseState.Failed
+    parseState = TryParseState.Success
   """
 
   let routeNotMatchedEx = """
@@ -543,8 +623,12 @@ module RouteCompilation =
   let renderUtilities (w:FSharpWriter) = 
     w.StartWriteLine "module Internal ="
     using (w.indent()) <| fun _ ->
-      //renderMultiLineStr w digitCheckFn 
-      //w.Write("\n")
+      renderMultiLineStr w tryParseStateTypeStr 
+      w.Write("\n")
+      renderMultiLineStr w tryParseInt32FunStr
+      w.Write("\n")
+      renderMultiLineStr w tryParseInt64FunStr
+      w.Write("\n")
       w.StartWriteLine("let fakeBaseUri = new Uri(\"http://a.a\")")
       w.Write("\n")
       renderMultiLineStr w routeNotMatchedEx

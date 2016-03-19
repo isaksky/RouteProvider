@@ -7,10 +7,37 @@ module Provided =
       "projects/" + projectId.ToString()
   let PUT__projects (foo:string) =
       "projects/" + foo
+  let createProject (projectId:int) =
+      "projects/" + projectId.ToString()
   let getProjectComments (projectId:int64) (commentId:int64) =
       "projects/" + projectId.ToString() + "comments/" + commentId.ToString()
 
   module Internal =
+    type TryParseState =
+    | Untried = 0
+    | Success = 1
+    | Failed = 2
+
+    let tryParseInt32 (s:string, parseState: TryParseState byref, result: int byref) =
+      match parseState with
+      | TryParseState.Failed
+      | TryParseState.Success -> ()
+      | _ ->
+        parseState <- match Int32.TryParse(s, &result) with
+        | true -> TryParseState.Success
+        | false -> TryParseState.Failed
+      parseState = TryParseState.Success
+
+    let tryParseInt64 (s:string, parseState: TryParseState byref, result: int64 byref) =
+      match parseState with
+      | TryParseState.Failed
+      | TryParseState.Success -> ()
+      | _ ->
+        parseState <- match Int64.TryParse(s, &result) with
+        | true -> TryParseState.Success
+        | false -> TryParseState.Failed
+      parseState = TryParseState.Success
+
     let fakeBaseUri = new Uri("http://a.a")
 
     exception RouteNotMatchedException of string * string
@@ -18,6 +45,7 @@ module Provided =
   type MyRoutes2 =
     { getProject: int64->unit
       PUT__projects: string->unit
+      createProject: int->unit
       getProjectComments: int64->int64->unit
       notFound: (string->string->unit) option }
 
@@ -54,10 +82,12 @@ module Provided =
       | 4 ->
         if String.Equals(parts.[0 + start],"projects") then
           let mutable projectId = 0L
-          if Int64.TryParse(parts.[1 + start], &projectId) then
+          let mutable projectId_parseState = Internal.TryParseState.Untried
+          if Internal.tryParseInt64(parts.[1 + start], &projectId_parseState, &projectId) then
             if String.Equals(parts.[2 + start],"comments") then
               let mutable commentId = 0L
-              if Int64.TryParse(parts.[3 + start], &commentId) then
+              let mutable commentId_parseState = Internal.TryParseState.Untried
+              if Internal.tryParseInt64(parts.[3 + start], &commentId_parseState, &commentId) then
                 if verb = "GET" then this.getProjectComments projectId commentId
                 else this.HandleNotFound(verb, path)
               else this.HandleNotFound(verb, path)
@@ -69,25 +99,42 @@ module Provided =
       //   [(ConstantSeg "projects",
       //     {endPoints = [];
       //      children =
-      //       [(StringSeg "foo", {endPoints = [{verb = "PUT";
+      //       [(IntSeg "intArgDepth_1",
+      //         {endPoints =
+      //           [{verb = "PUT";
+      //             handlerName = "PUT__projects";}; {verb = "POST";
+      //                                               handlerName = "createProject";}];
+      //          children = [];
+      //          depth = 2;});
+      //        (StringSeg "foo", {endPoints = [{verb = "PUT";
       //                                         handlerName = "PUT__projects";}];
       //                           children = [];
       //                           depth = 2;});
-      //        (Int64Seg "projectId", {endPoints = [{verb = "GET";
-      //                                              handlerName = "getProject";}];
-      //                                children = [];
-      //                                depth = 2;})];
+      //        (Int64Seg "int64ArgDepth_1",
+      //         {endPoints =
+      //           [{verb = "PUT";
+      //             handlerName = "PUT__projects";}; {verb = "GET";
+      //                                               handlerName = "getProject";}];
+      //          children = [];
+      //          depth = 2;})];
       //      depth = 1;})];
       //  depth = 0;}
       | 2 ->
         if String.Equals(parts.[0 + start],"projects") then
-          let mutable projectId = 0L
-          if Int64.TryParse(parts.[1 + start], &projectId) then
-            if verb = "GET" then this.getProject projectId
+          let mutable int64ArgDepth_1 = 0L
+          let mutable int64ArgDepth_1_parseState = Internal.TryParseState.Untried
+          let mutable intArgDepth_1 = 0
+          let mutable intArgDepth_1_parseState = Internal.TryParseState.Untried
+          if Internal.tryParseInt64(parts.[1 + start], &int64ArgDepth_1_parseState, &int64ArgDepth_1) then
+            if verb = "PUT" then this.PUT__projects int64ArgDepth_1
+            elif verb = "GET" then this.getProject int64ArgDepth_1
+            else this.HandleNotFound(verb, path)
+          elif Internal.tryParseInt32(parts.[1 + start], &intArgDepth_1_parseState, &intArgDepth_1) then
+            if verb = "PUT" then this.PUT__projects intArgDepth_1
+            elif verb = "POST" then this.createProject intArgDepth_1
             else this.HandleNotFound(verb, path)
           else
-            let foo = parts.[1 + start]
-            if verb = "PUT" then this.PUT__projects foo
+            if verb = "PUT" then this.PUT__projects (parts.[1 + start])
             else this.HandleNotFound(verb, path)
         else this.HandleNotFound(verb, path)
       | _ ->

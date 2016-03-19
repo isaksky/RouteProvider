@@ -1,20 +1,5 @@
-﻿#r @"..\..\..\RouteProvider\bin\Debug\RouteProvider.dll"
+﻿//#r @"..\..\..\RouteProvider\bin\Debug\RouteProvider.dll"
 
-[<Literal>]
-let routes = """
-  GET projects/{projectId} as getProject
-  GET projects/{projectId}/comments/{commentId} as getProjectComments
-  PUT projects/{projectId:int} as updateProject 
-  GET projects/statistics 
-  GET people/{name:string} as getPersons
-"""
-
-//[<Literal>]
-//let routes2 = """
-//  GET projects/{projectId} as getProject
-//"""
-
-type MyRoutes = IsakSky.RouteProvider<routes, true, true, @"C:\Users\Isak\Desktop\in_the_barn3.cs">
 
 //let router = MyRoutes(
 //              getProject = (fun projectId -> printfn "You asked for project %d" projectId),
@@ -31,3 +16,7 @@ type MyRoutes = IsakSky.RouteProvider<routes, true, true, @"C:\Users\Isak\Deskto
 //MyRoutes.Builders.getProjectComments(1L, 123L)
 //router.DispatchRoute("GET", "/projects/123/")
 //router.DispatchRoute("ctx", "GET", "/projects/123/comments/4/")
+
+
+
+
