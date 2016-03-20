@@ -82,8 +82,12 @@ Generated code:
           //             {endPoints = [];
           //              children =
           //               [(Int64Seg "commentId",
-          //                 {endPoints = [{verb = "GET";
-          //                                handlerName = "getProjectComments";}];
+          //                 {endPoints =
+          //                   [{verb = "GET";
+          //                     handlerName = "getProjectComments";
+          //                     segments =
+          //                      [ConstantSeg "projects"; Int64Seg "projectId";
+          //                       ConstantSeg "comments"; Int64Seg "commentId"];}];
           //                  children = [];
           //                  depth = 4;})];
           //              depth = 3;})];
@@ -109,33 +113,42 @@ Generated code:
           //  children =
           //   [(ConstantSeg "people",
           //     {endPoints = [];
-          //      children = [(StringSeg "name", {endPoints = [{verb = "GET";
-          //                                                    handlerName = "getPerson";}];
-          //                                      children = [];
-          //                                      depth = 2;})];
+          //      children =
+          //       [(StringSeg "name",
+          //         {endPoints = [{verb = "GET";
+          //                        handlerName = "getPerson";
+          //                        segments = [ConstantSeg "people"; StringSeg "name"];}];
+          //          children = [];
+          //          depth = 2;})];
           //      depth = 1;});
           //    (ConstantSeg "projects",
           //     {endPoints = [];
           //      children =
           //       [(ConstantSeg "statistics",
-          //         {endPoints = [{verb = "GET";
-          //                        handlerName = "GET__projects_statistics";}];
+          //         {endPoints =
+          //           [{verb = "GET";
+          //             handlerName = "GET__projects_statistics";
+          //             segments = [ConstantSeg "projects"; ConstantSeg "statistics"];}];
           //          children = [];
           //          depth = 2;});
-          //        (IntSeg "intArgDepth_1", {endPoints = [{verb = "PUT";
-          //                                                handlerName = "updateProject";}];
-          //                                  children = [];
-          //                                  depth = 2;});
+          //        (IntSeg "intArgDepth_1",
+          //         {endPoints =
+          //           [{verb = "PUT";
+          //             handlerName = "updateProject";
+          //             segments = [ConstantSeg "projects"; IntSeg "projectId"];}];
+          //          children = [];
+          //          depth = 2;});
           //        (Int64Seg "int64ArgDepth_1",
-          //         {endPoints = [{verb = "GET";
-          //                        handlerName = "getProject";}];
+          //         {endPoints =
+          //           [{verb = "GET";
+          //             handlerName = "getProject";
+          //             segments = [ConstantSeg "projects"; Int64Seg "projectId"];}];
           //          children = [];
           //          depth = 2;})];
           //      depth = 1;})];
           //  depth = 0;}
           | 2 ->
             if String.Equals(parts.[0 + start],"people") then
-              let name = parts.[1 + start]
               if verb = "GET" then this.getPerson (parts.[1 + start])
               else this.HandleNotFound(verb, path)
             elif String.Equals(parts.[0 + start],"projects") then

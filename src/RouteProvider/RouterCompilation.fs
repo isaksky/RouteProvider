@@ -161,18 +161,19 @@ module RouteCompilation =
             mkRouteBuilder segs tmpConsts ret
           | seg::segs ->
             let name = match seg with 
-            | Int64Seg(name) | IntSeg(name) | StringSeg(name) -> name 
-            | ConstantSeg(_) -> failwith "Logic error"
+                       | Int64Seg(name) | IntSeg(name) | StringSeg(name) -> name 
+                       | ConstantSeg(_) -> failwith "Logic error"
 
             if tmpConsts.Count > 0 then
               let pfx = tmpConsts |> String.concat "/" |> sprintf "\"%s/\""
               tmpConsts.Clear()
               ret.Add(pfx)
-            let argPart = match seg with
-            | Int64Seg(_)
-            | IntSeg(_) -> sprintf "%s.ToString()" name
-            | StringSeg(_) -> name
-            | ConstantSeg(_) -> failwith "Logic error"
+            let argPart = 
+              match seg with
+              | Int64Seg(_)
+              | IntSeg(_) -> sprintf "%s.ToString()" name
+              | StringSeg(_) -> name
+              | ConstantSeg(_) -> failwith "Logic error"
 
             ret.Add(argPart)
             mkRouteBuilder segs tmpConsts ret
@@ -233,18 +234,18 @@ module RouteCompilation =
         children = []
         depth = 0 }
   and Endpoint = 
-    { verb: string; handlerName: string }
+    { verb: string; handlerName: string; segments: NamedRouteSegment list}
 
   let routeEndPoint (route:Route) = 
-    { verb = route.verb; handlerName = (handlerName route)}
+    { verb = route.verb; handlerName = (handlerName route); segments = route.routeSegments}
 
   let rec buildNode (endPoint:Endpoint) (segsRemaining: NamedRouteSegment list) (depth: int) =
     match segsRemaining with
     | [] -> 
-      { endPoints = [endPoint]; children = []; depth = depth }
+      { endPoints = [endPoint]; children = []; depth = depth; }
     | seg::segs ->
       let child = seg, (buildNode endPoint segs (depth + 1))
-      { endPoints = []; children = [child]; depth = depth }
+      { endPoints = []; children = [child]; depth = depth; }
 
   let rec addRoute (routeNode:RouteNode) (endPoint:Endpoint) (segsRemaining: NamedRouteSegment list) (depth: int) =
     match segsRemaining with
@@ -308,6 +309,15 @@ module RouteCompilation =
           yield! (getBranches' subTree (seg::preSegs))      
       }
     getBranches' routeTree []
+
+  let getDynamicParams (segs:NamedRouteSegment list) =
+    segs
+    |> List.choose(
+      function
+      | IntSeg(name) -> Some <| IntParam(name)
+      | Int64Seg(name) -> Some <| Int64Param(name)
+      | StringSeg(name) -> Some <| StringParam(name)
+      | ConstantSeg(name) -> None)
 
   let captureEq (seg1:NamedRouteSegment) (seg2:NamedRouteSegment) =
     match seg1, seg2 with
@@ -433,7 +443,6 @@ module RouteCompilation =
           member y.Dispose() = () }
 
   let renderSegmentTests (seg:NamedRouteSegment) (scope:(int * DynamicParam) list) (isFirst:bool) (depth:int) (_:RouteCompilationArgs) (w:FSharpWriter) =
-    // TODO: For final, flatten endpoints
     match seg with
     | ConstantSeg(name) ->
       let kwd = if isFirst then "if" else "elif"
@@ -449,28 +458,40 @@ module RouteCompilation =
       (depth, IntParam(name)) :: scope, w.indent()
     | StringSeg(name) ->
       if isFirst then
-        w.StartWriteLine <| sprintf "let %s = parts.[%d + start]" name depth
         (depth, StringParam(name))::scope, noOptDisp
       else
         w.StartWriteLine "else"
         (depth, StringParam(name))::scope, w.indent()
+
+
 
   let rec renderRouteNodeCondTree (routeTree:RouteNode) (scope:(int * DynamicParam) list) (options:RouteCompilationArgs) (w:FSharpWriter) =
     //dbgComment routeTree w
     match routeTree.endPoints, routeTree.children with
     | [], [] -> failwith "Logic error"
     | endPoints, [] ->
-      let argStr = 
-        scope 
-        |> List.rev 
-        |> List.map (function 
-          | _, Int64Param(name)
-          | _, IntParam(name) -> name
-          | n, StringParam(_) -> sprintf "(parts.[%d + start])" n)
-        |> String.concat " "
-
       let numEndPoints = List.length endPoints
       endPoints |> List.iteri(fun i endP ->
+        let endpointScope = endP.segments |> getDynamicParams
+        
+        // We copy parts of the RouteNode tree in cases where a segment being parsable
+        // as an int would otherwise prevent it from being used as a string, so rewrite
+        // the scope to handle that here
+        let scope = 
+          (scope, endpointScope) ||> List.map2 (fun condSeg routeSeg ->
+            match condSeg, routeSeg with
+            | (n, _), StringParam(_) -> n, routeSeg
+            | condSeg, _ -> condSeg)
+
+        let argStr = 
+          scope 
+          |> List.rev 
+          |> List.map (function 
+            | _, Int64Param(name)
+            | _, IntParam(name) -> name
+            | n, StringParam(_) -> sprintf "(parts.[%d + start])" n)
+          |> String.concat " "
+
         let keyword = if i = 0 then "if" else "elif"                
         w.StartWriteLine <| sprintf "%s verb = \"%s\" then this.%s %s" keyword (endP.verb) (endP.handlerName) argStr
         let isLast = i = numEndPoints - 1
@@ -516,7 +537,7 @@ module RouteCompilation =
     match routeTree.children with
     | [] -> routeTree
     | children -> 
-      match children |> List.tryFind(fun (seg, child) -> match seg with | StringSeg(_) -> true | _ -> false) with
+      match children |> List.tryFind(fun (seg, _) -> match seg with | StringSeg(_) -> true | _ -> false) with
       | Some(_, strChild) ->
         let newChildren = 
           children
@@ -525,7 +546,7 @@ module RouteCompilation =
             | Int64Seg(_) 
             | IntSeg(_) ->
               seg, { child with 
-                      endPoints = child.endPoints @ strChild.endPoints
+                      endPoints = child.endPoints @ strChild.endPoints 
                       children = child.children @ strChild.children }
             | StringSeg(_)
             | ConstantSeg(_) ->
@@ -537,8 +558,8 @@ module RouteCompilation =
   let renderDispatchMethods (routeTree:RouteNode) (options:RouteCompilationArgs) (w:FSharpWriter) =
     let nodesWithLength = 
       routeTree 
-      |> resolveBranchOverlap 
       |> groupNodesByLength
+      |> List.map (fun (i, routeNode) -> i, resolveBranchOverlap routeNode)
 
     let baseArgs = ["verb:string"; "path:string"]
 

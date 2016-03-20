@@ -71,8 +71,12 @@ module Provided =
       //             {endPoints = [];
       //              children =
       //               [(Int64Seg "commentId",
-      //                 {endPoints = [{verb = "GET";
-      //                                handlerName = "getProjectComments";}];
+      //                 {endPoints =
+      //                   [{verb = "GET";
+      //                     handlerName = "getProjectComments";
+      //                     segments =
+      //                      [ConstantSeg "projects"; Int64Seg "projectId";
+      //                       ConstantSeg "comments"; Int64Seg "commentId"];}];
       //                  children = [];
       //                  depth = 4;})];
       //              depth = 3;})];
@@ -101,20 +105,28 @@ module Provided =
       //      children =
       //       [(IntSeg "intArgDepth_1",
       //         {endPoints =
-      //           [{verb = "PUT";
-      //             handlerName = "PUT__projects";}; {verb = "POST";
-      //                                               handlerName = "createProject";}];
+      //           [{verb = "POST";
+      //             handlerName = "createProject";
+      //             segments = [ConstantSeg "projects"; IntSeg "projectId"];};
+      //            {verb = "PUT";
+      //             handlerName = "PUT__projects";
+      //             segments = [ConstantSeg "projects"; StringSeg "foo"];}];
       //          children = [];
       //          depth = 2;});
-      //        (StringSeg "foo", {endPoints = [{verb = "PUT";
-      //                                         handlerName = "PUT__projects";}];
-      //                           children = [];
-      //                           depth = 2;});
+      //        (StringSeg "foo",
+      //         {endPoints = [{verb = "PUT";
+      //                        handlerName = "PUT__projects";
+      //                        segments = [ConstantSeg "projects"; StringSeg "foo"];}];
+      //          children = [];
+      //          depth = 2;});
       //        (Int64Seg "int64ArgDepth_1",
       //         {endPoints =
-      //           [{verb = "PUT";
-      //             handlerName = "PUT__projects";}; {verb = "GET";
-      //                                               handlerName = "getProject";}];
+      //           [{verb = "GET";
+      //             handlerName = "getProject";
+      //             segments = [ConstantSeg "projects"; Int64Seg "projectId"];};
+      //            {verb = "PUT";
+      //             handlerName = "PUT__projects";
+      //             segments = [ConstantSeg "projects"; StringSeg "foo"];}];
       //          children = [];
       //          depth = 2;})];
       //      depth = 1;})];
@@ -126,12 +138,12 @@ module Provided =
           let mutable intArgDepth_1 = 0
           let mutable intArgDepth_1_parseState = Internal.TryParseState.Untried
           if Internal.tryParseInt64(parts.[1 + start], &int64ArgDepth_1_parseState, &int64ArgDepth_1) then
-            if verb = "PUT" then this.PUT__projects int64ArgDepth_1
-            elif verb = "GET" then this.getProject int64ArgDepth_1
+            if verb = "GET" then this.getProject int64ArgDepth_1
+            elif verb = "PUT" then this.PUT__projects (parts.[1 + start])
             else this.HandleNotFound(verb, path)
           elif Internal.tryParseInt32(parts.[1 + start], &intArgDepth_1_parseState, &intArgDepth_1) then
-            if verb = "PUT" then this.PUT__projects intArgDepth_1
-            elif verb = "POST" then this.createProject intArgDepth_1
+            if verb = "POST" then this.createProject intArgDepth_1
+            elif verb = "PUT" then this.PUT__projects (parts.[1 + start])
             else this.HandleNotFound(verb, path)
           else
             if verb = "PUT" then this.PUT__projects (parts.[1 + start])
