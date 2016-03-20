@@ -43,21 +43,19 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
 
   let staticParams = [|
     { new ParameterInfo() with
-        override this.Name with get() = "routes"
+        override this.Name with get() = "typeName"
         override this.Position with get() = 0
         override this.ParameterType with get() = typeof<string>
         override this.Attributes with get() = ParameterAttributes.None
     }
     { new ParameterInfo() with
-        override this.Name with get() = "inputType"
+        override this.Name with get() = "routes"
         override this.Position with get() = 1
-        override this.ParameterType with get() = typeof<bool>
-        override this.Attributes with get() = ParameterAttributes.Optional
-        override this.RawDefaultValue with get() = false :> obj
-        override this.DefaultValue with get() = false :> obj
+        override this.ParameterType with get() = typeof<string>
+        override this.Attributes with get() = ParameterAttributes.None
     }
     { new ParameterInfo() with
-        override this.Name with get() = "returnType"
+        override this.Name with get() = "inputType"
         override this.Position with get() = 2
         override this.ParameterType with get() = typeof<bool>
         override this.Attributes with get() = ParameterAttributes.Optional
@@ -65,8 +63,16 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
         override this.DefaultValue with get() = false :> obj
     }
     { new ParameterInfo() with
-        override this.Name with get() = "outputPath"
+        override this.Name with get() = "returnType"
         override this.Position with get() = 3
+        override this.ParameterType with get() = typeof<bool>
+        override this.Attributes with get() = ParameterAttributes.Optional
+        override this.RawDefaultValue with get() = false :> obj
+        override this.DefaultValue with get() = false :> obj
+    }
+    { new ParameterInfo() with
+        override this.Name with get() = "outputPath"
+        override this.Position with get() = 4
         override this.ParameterType with get() = typeof<string>
         override this.Attributes with get() = ParameterAttributes.Optional
         override this.RawDefaultValue with get() = "" :> obj
@@ -110,16 +116,16 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
         else 
           [| |]
       member this.ApplyStaticArguments(_ (*typeWithoutArguments *), typeNameWithArguments, staticArguments) =
-        log "Apply static params!"
-        let typeName = typeNameWithArguments.[typeNameWithArguments.Length - 1]
+        let dummyTypeName = typeNameWithArguments.[typeNameWithArguments.Length - 1]
 
-        let routesStr, inputType, returnType, outputPath  = 
+        let typeName, routesStr, inputType, returnType, outputPath  = 
           match staticArguments with
-          | [|:? string as routesStr 
+          | [|:? string as typeName
+              :? string as routesStr 
               :? bool as inputType
               :? bool as returnType
               :? string as outputPath|] ->
-              routesStr, inputType, returnType, outputPath
+              typeName, routesStr, inputType, returnType, outputPath
           | _ ->
             failwithf "Bad params: %A" staticArguments
 
@@ -140,12 +146,12 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
           let em = 
             _emmiters.GetOrAdd(resolvedOutputPath, fun resolvedOutputPath ->
               let threadName = Threading.Thread.CurrentThread.ManagedThreadId                
-              log "[RouteProvider]: Thread %d, Instance %A creating a RouterEmitter for %s" threadName (ObjectUtilities.GetInstanceId(this)) resolvedOutputPath
+              //log "[RouteProvider]: Thread %d, Instance %A creating a RouterEmitter for %s" threadName (ObjectUtilities.GetInstanceId(this)) resolvedOutputPath
               let em = RouterEmitter(resolvedOutputPath)
               let listenerRef : IDisposable ref = ref null
               let listener = em.Expired.Subscribe(fun _ -> 
                 _emmiters.TryRemove(resolvedOutputPath) |> ignore
-                log "[RouteProvider]: Thread %d, Instance %A shutting down RouterEmitter for %s" threadName (ObjectUtilities.GetInstanceId(this)) resolvedOutputPath
+                //log "[RouteProvider]: Thread %d, Instance %A shutting down RouterEmitter for %s" threadName (ObjectUtilities.GetInstanceId(this)) resolvedOutputPath
                 (!listenerRef).Dispose())                           
               listenerRef := listener
               em
@@ -161,19 +167,19 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
               moduleName = None }
 
           let res = em.PostMessage(routeEmitArgs)
-          log "Reply from emitter: %A" res            
+          //log "Reply from emitter: %A" res            
 
           match res with
           | IgnoredStale -> 
-            RouteProviderCore.GetOrCreateFakeAsm(typeName, cfg.TemporaryFolder)
+            RouteProviderCore.GetOrCreateFakeAsm(dummyTypeName, cfg.TemporaryFolder)
           | IgnoredBadExtension -> 
             failwith "Bad output file extension. Only *.fs supported"
           | RefuseFilenameTaken -> 
             failwithf "Refusing to overwrite file \"%s\". Filename is taken, and does not look generated." resolvedOutputPath
           | Ok | OkSecondaryThread -> 
-            log "Triggering invalidation..."
+            //log "Triggering invalidation..."
             invalidation.Trigger(this, new EventArgs())
-            RouteProviderCore.GetOrCreateFakeAsm(typeName, cfg.TemporaryFolder)
+            RouteProviderCore.GetOrCreateFakeAsm(dummyTypeName, cfg.TemporaryFolder)
       member this.GetInvokerExpression(syntheticMethodBase, parameters) =
           match syntheticMethodBase with
           | :? ConstructorInfo as ctor ->
@@ -189,7 +195,7 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
         |> Array.tryPick (fun typ -> _asmBytesCache.TryGet (typ.Name))
         |> Option.get
       member this.Dispose() =
-        log "this.Dispose()!"
+        //log "this.Dispose()!"
         AppDomain.CurrentDomain.remove_AssemblyResolve(_assemblyResolver)
 
   interface IProvidedNamespace with

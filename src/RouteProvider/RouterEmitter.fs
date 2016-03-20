@@ -54,8 +54,8 @@ type RouterEmitter(outputPath : string) =
   let maxWaitNoMessage = 2000
   let waitNonExistantFile = 3000
 
-  do
-    log "[RouterEmitter]: Starting for %s" outputPath
+//  do
+//    log "[RouterEmitter]: Starting for %s" outputPath
 
   member private this.HandleMessage(emissionArgs:RouterEmissionArgs) =
     let path = emissionArgs.outputPath
@@ -80,7 +80,7 @@ type RouterEmitter(outputPath : string) =
         Ok
     with
     | :? System.IO.IOException ->
-      log "Ah, someone beat us to it."
+      //log "Ah, someone beat us to it."
       OkSecondaryThread
   member private this.Mail : MailboxProcessor<RouterEmissionMessage> = MailboxProcessor.Start(fun inbox ->
     let rec loop (numSkipped, waited) = 
@@ -117,7 +117,6 @@ type RouterEmitter(outputPath : string) =
                 replyChan.Reply <| this.HandleMessage(args)
                 return! loop (numSkipped, 0)
             return! loop (numSkipped, 0)
-
       }      
     loop (0, 0))
 

@@ -56,9 +56,8 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="MyRoutes.fs" />
-    <Compile Include="Router.fs" />
-    <None Include="Simple.fsx" />
     <None Include="App.config" />
+    <Compile Include="Program.fs" />
   </ItemGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
