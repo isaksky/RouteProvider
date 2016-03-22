@@ -23,16 +23,16 @@ module RouteCompilation =
   and CompilationOutputType =
   | FSharp
 
-  type RouterKlass = 
+  type RouterKlass =
     { name: string
       ctor: HandlerCtorParam list option
       routeKlasses: RouteBuilder list
       methods: Method list }
-  and RouteBuilder = 
+  and RouteBuilder =
     { name: string
       arguments: FunctionParam list
       segments: NamedRouteSegment list }
-  and DynamicParam = 
+  and DynamicParam =
     | Int64Param of string
     | IntParam of string
     | StringParam of string
@@ -49,7 +49,7 @@ module RouteCompilation =
     | Some(routeName) ->
       routeName
     | None ->
-      let routeParts = route.routeSegments |> List.choose  (function 
+      let routeParts = route.routeSegments |> List.choose  (function
         | ConstantSeg(name) -> Some(name)
         | _ -> None)
       sprintf "%s__%s" (route.verb) (String.concat "_" routeParts)
@@ -64,14 +64,14 @@ module RouteCompilation =
       (route.routeSegments)
 
   let routeSubClass (route:Route) =
-    { name = (routeName route) 
+    { name = (routeName route)
       arguments = (routeIVars route)
       segments = route.routeSegments }
- 
+
   let makeRouteKlasses (routes:Route list) =
     List.map routeSubClass routes
 
-  let handlerName = routeName 
+  let handlerName = routeName
 
   let makeHandlerCtorParam (route:Route) =
     { name = (handlerName route)
@@ -83,7 +83,7 @@ module RouteCompilation =
                         | _ -> None)
                       (route.routeSegments)) }
 
-  let makeCtor (routes:Route list) = 
+  let makeCtor (routes:Route list) =
     Some((routes |> List.map makeHandlerCtorParam))
 
   let routes2Class (routes:Route list) (options: RouteCompilationArgs) =
@@ -101,12 +101,12 @@ module RouteCompilation =
       indentation <- indentation + x.IndentSize
     member x.DecIndent () =
       indentation <- indentation - x.IndentSize
-    member x.indent () = 
+    member x.indent () =
       x.IncIndent()
-      { new System.IDisposable with 
-          member y.Dispose() = 
+      { new System.IDisposable with
+          member y.Dispose() =
             x.DecIndent() }
-    member x.StartWriteLine(line: string) = 
+    member x.StartWriteLine(line: string) =
       let pfx = new string(' ', indentation)
       let s = sprintf "%s%s\n" pfx line
       if s.Length > 0 then
@@ -123,7 +123,7 @@ module RouteCompilation =
         lastNewLine <- str.[str.Length - 1] = '\n'
       x.content.Append(str) |> ignore
     member x.Newline() =
-      if not lastNewLine then 
+      if not lastNewLine then
         x.Write("\n")
         lastNewLine <- true
 
@@ -131,7 +131,7 @@ module RouteCompilation =
 
   let quoteIfNeeded (fnName:string) =
     // Todo: check if this is right
-    let s, _ = idVal.ValidateAndNormalize(fnName) 
+    let s, _ = idVal.ValidateAndNormalize(fnName)
     match s with
     | null -> sprintf "``%s``" s
     | _ -> s
@@ -151,7 +151,7 @@ module RouteCompilation =
       using (w.indent()) (fun _ ->
         let rec mkRouteBuilder segs (tmpConsts:ResizeArray<_>) (ret:ResizeArray<_>) =
           match segs with
-          | [] -> 
+          | [] ->
             if tmpConsts.Count > 0 then
               let sfx = tmpConsts |> String.concat "/" |> sprintf "\"%s/\""
               ret.Add(sfx)
@@ -160,15 +160,15 @@ module RouteCompilation =
             tmpConsts.Add(name)
             mkRouteBuilder segs tmpConsts ret
           | seg::segs ->
-            let name = match seg with 
-                       | Int64Seg(name) | IntSeg(name) | StringSeg(name) -> name 
+            let name = match seg with
+                       | Int64Seg(name) | IntSeg(name) | StringSeg(name) -> name
                        | ConstantSeg(_) -> failwith "Logic error"
 
             if tmpConsts.Count > 0 then
               let pfx = tmpConsts |> String.concat "/" |> sprintf "\"%s/\""
               tmpConsts.Clear()
               ret.Add(pfx)
-            let argPart = 
+            let argPart =
               match seg with
               | Int64Seg(_)
               | IntSeg(_) -> sprintf "%s.ToString()" name
@@ -187,7 +187,7 @@ module RouteCompilation =
 
   let paramListTypeString (paramList: DynamicParam list) (options:RouteCompilationArgs) =
     let fnTypes = paramList |> List.map dynParamTypeName |> ResizeArray
-    
+
     if fnTypes.Count = 0 || options.inputType then
       let inTpName = if options.inputType then "'TContext" else "unit"
       fnTypes.Insert(0, inTpName)
@@ -216,32 +216,32 @@ module RouteCompilation =
 
       if i = 0 then
         let spaces = new String(' ', w.IndentSize - 1) // take already written opening brace into account
-        w.Write <| sprintf "%s%s: %s" spaces (ctorParam.name) (paramListTypeString ctorArgs options) 
+        w.Write <| sprintf "%s%s: %s" spaces (ctorParam.name) (paramListTypeString ctorArgs options)
       else
         let spaces = new String(' ', w.IndentSize)
-        w.StartWrite <| sprintf "%s%s: %s" spaces (ctorParam.name) (paramListTypeString ctorArgs options) 
-      
+        w.StartWrite <| sprintf "%s%s: %s" spaces (ctorParam.name) (paramListTypeString ctorArgs options)
+
       w.Write("\n")
     w.StartWrite <| sprintf "%s%s" (new String(' ', w.IndentSize)) (notFoundCtorStr options)
     w.Write(" }")
 
-  type RouteNode = 
+  type RouteNode =
     { endPoints: Endpoint list
       children: (NamedRouteSegment * RouteNode) list
       depth: int }
-    static member Empty () = 
+    static member Empty () =
       { endPoints = []
         children = []
         depth = 0 }
-  and Endpoint = 
+  and Endpoint =
     { verb: string; handlerName: string; segments: NamedRouteSegment list}
 
-  let routeEndPoint (route:Route) = 
+  let routeEndPoint (route:Route) =
     { verb = route.verb; handlerName = (handlerName route); segments = route.routeSegments}
 
   let rec buildNode (endPoint:Endpoint) (segsRemaining: NamedRouteSegment list) (depth: int) =
     match segsRemaining with
-    | [] -> 
+    | [] ->
       { endPoints = [endPoint]; children = []; depth = depth; }
     | seg::segs ->
       let child = seg, (buildNode endPoint segs (depth + 1))
@@ -252,23 +252,23 @@ module RouteCompilation =
     | [] ->
       { routeNode with endPoints = routeNode.endPoints @ [endPoint] }
     | seg::segs ->
-      let existingChild = 
-        routeNode.children 
+      let existingChild =
+        routeNode.children
         |> Seq.tryFind (fun (s, _) -> s = seg)
       match existingChild with
-      | None -> 
+      | None ->
         let newChild = seg, buildNode endPoint segs (depth + 1)
         { routeNode with children = routeNode.children @ [newChild]}
       | Some(existingChild) ->
         let updatedChildren =
           routeNode.children
-          |> List.map (fun child -> 
+          |> List.map (fun child ->
             if child = existingChild then
               let seg, routeNode = child
               (seg, (addRoute routeNode endPoint segs (depth + 1)))
             else
-              child) 
-        { routeNode with children = updatedChildren }   
+              child)
+        { routeNode with children = updatedChildren }
 
   let buildRouteTree (routes: Route list) =
     let rec addRouteF routeNode routes =
@@ -292,7 +292,7 @@ module RouteCompilation =
     let notFoundArgs = if options.inputType then "context" :: notFoundArgs' else notFoundArgs'
     let argStr = notFoundArgs |> String.concat ", "
     w.StartWriteLine <| sprintf "member inline private this.HandleNotFound(%s) =" argStr
-    
+
     using (w.indent()) <| fun _ ->
       w.StartWriteLine <| "match this.notFound with"
       w.StartWriteLine <| "| None -> raise (Internal.RouteNotMatchedException (verb, path))"
@@ -300,13 +300,13 @@ module RouteCompilation =
       w.StartWriteLine <| sprintf "| Some(notFound) -> notFound %s" notFoundArgsStr
 
   let getBranches (routeTree:RouteNode) : (NamedRouteSegment list * Endpoint) seq =
-    let rec getBranches' (routeTree:RouteNode) (preSegs : NamedRouteSegment list) = 
+    let rec getBranches' (routeTree:RouteNode) (preSegs : NamedRouteSegment list) =
       seq {
         for endP in routeTree.endPoints do
           yield (List.rev preSegs), endP
 
         for seg, subTree in routeTree.children do
-          yield! (getBranches' subTree (seg::preSegs))      
+          yield! (getBranches' subTree (seg::preSegs))
       }
     getBranches' routeTree []
 
@@ -335,7 +335,7 @@ module RouteCompilation =
 
   let segName (seg:NamedRouteSegment) =
     match seg with
-    | Int64Seg(name) 
+    | Int64Seg(name)
     | IntSeg(name)
     | StringSeg(name)
     | ConstantSeg(name) -> name
@@ -363,7 +363,7 @@ module RouteCompilation =
           if Object.ReferenceEquals(tmpSeg, seg2) then
             newSeg2, c
           else
-            tmpSeg, c        
+            tmpSeg, c
         )
       newSeg, { routeTree with children = newChildren }
     | None -> seg, routeTree
@@ -377,7 +377,7 @@ module RouteCompilation =
         let seg, routeTree = resolveNameClashes seg routeTree
         match routeTree.children |> List.tryFindIndex(fun (seg2, _) -> captureEq seg seg2) with
         | Some(idx) ->
-          let seg2, existingChild = routeTree.children |> List.item idx 
+          let seg2, existingChild = routeTree.children |> List.item idx
 
           // Might need to make variable name generic, if we have multiple routes that capture the
           // same type and position with diff variable names
@@ -397,31 +397,31 @@ module RouteCompilation =
       segs
       |> List.rev
       |> List.fold
-        (fun node seg -> 
+        (fun node seg ->
           //Utility.log "node: %A depth: %d" node (node.depth - 1)
           { children = [seg, node]; endPoints = []; depth = node.depth - 1})
         { children = []; endPoints = [endpoint]; depth = startDepth + segs.Length}
-    
+
     let addTree (treeGroups: (int * RouteNode) list) (len:int, routeParts) : (int * RouteNode) list =
       match treeGroups |> List.tryFindIndex (fun (n, _) -> n = len) with
       | Some(idx) ->
-        let _, node = Seq.item idx treeGroups 
+        let _, node = Seq.item idx treeGroups
         let updatedNode = addG node routeParts
         treeGroups
-        |> List.mapi (fun i (n, node) -> 
+        |> List.mapi (fun i (n, node) ->
           if i = idx then
             len, updatedNode
           else
             n, node)
-      | None -> 
+      | None ->
         let segs, endP = routeParts
         let newNode = buildRouteNode (0, segs, endP)
         (len, newNode) :: treeGroups
 
     routeTree
     |> getBranches
-    |> Seq.fold 
-      (fun acc routeParts -> 
+    |> Seq.fold
+      (fun acc routeParts ->
         let segs, _ = routeParts
         let n = List.length segs
         addTree acc (n, routeParts))
@@ -439,7 +439,7 @@ module RouteCompilation =
     | StringSeg(_) -> 40
 
   let noOptDisp =
-    { new System.IDisposable with 
+    { new System.IDisposable with
           member y.Dispose() = () }
 
   let renderSegmentTests (seg:NamedRouteSegment) (scope:(int * DynamicParam) list) (isFirst:bool) (depth:int) (_:RouteCompilationArgs) (w:FSharpWriter) =
@@ -448,11 +448,11 @@ module RouteCompilation =
       let kwd = if isFirst then "if" else "elif"
       w.StartWriteLine <| sprintf "%s String.Equals(parts.[%d + start],\"%s\") then" kwd depth name
       scope, w.indent()
-    | Int64Seg(name) -> 
+    | Int64Seg(name) ->
       let kwd = if isFirst then "if" else "elif"
       w.StartWriteLine <| sprintf "%s Internal.tryParseInt64(parts.[%d + start], &%s_parseState, &%s) then" kwd depth name name
       (depth, Int64Param(name)) :: scope, w.indent()
-    | IntSeg(name) -> 
+    | IntSeg(name) ->
       let kwd = if isFirst then "if" else "elif"
       w.StartWriteLine <| sprintf "%s Internal.tryParseInt32(parts.[%d + start], &%s_parseState, &%s) then" kwd depth name name
       (depth, IntParam(name)) :: scope, w.indent()
@@ -473,42 +473,42 @@ module RouteCompilation =
       let numEndPoints = List.length endPoints
       endPoints |> List.iteri(fun i endP ->
         let endpointScope = endP.segments |> getDynamicParams
-        
+
         // We copy parts of the RouteNode tree in cases where a segment being parsable
         // as an int would otherwise prevent it from being used as a string, so rewrite
         // the scope to handle that here
-        let scope = 
+        let scope =
           (scope, endpointScope) ||> List.map2 (fun condSeg routeSeg ->
             match condSeg, routeSeg with
             | (n, _), StringParam(_) -> n, routeSeg
             | condSeg, _ -> condSeg)
 
-        let argStr = 
-          scope 
+        let argStr =
+          scope
           |> List.rev
-          |> List.map (function 
+          |> List.map (function
             | _, Int64Param(name)
             | _, IntParam(name) -> name
             | n, StringParam(_) -> sprintf "(parts.[%d + start])" n)
           |> String.concat " "
 
-        let keyword = if i = 0 then "if" else "elif"                
+        let keyword = if i = 0 then "if" else "elif"
         w.StartWriteLine <| sprintf "%s verb = \"%s\" then this.%s %s" keyword (endP.verb) (endP.handlerName) argStr
         let isLast = i = numEndPoints - 1
-        if isLast then 
+        if isLast then
           w.StartWrite <| "else "
           renderNotFoundCall options w
           w.Newline())
     | [], children ->
       let children = children |> List.sortBy (fst >> segScore)
-      
+
       // declare vars for TryParse methods to use
       for cseg, _ in children do
-        match cseg with 
-        | Int64Seg(name) -> 
+        match cseg with
+        | Int64Seg(name) ->
           w.StartWriteLine <| sprintf "let mutable %s = 0L" name
           w.StartWriteLine <| sprintf "let mutable %s_parseState = Internal.TryParseState.Untried" name
-        | IntSeg(name) -> 
+        | IntSeg(name) ->
           w.StartWriteLine <| sprintf "let mutable %s = 0" name
           w.StartWriteLine <| sprintf "let mutable %s_parseState = Internal.TryParseState.Untried" name
         | StringSeg(_)
@@ -516,13 +516,13 @@ module RouteCompilation =
 
       let numChildren = List.length children
       children
-      |> List.iteri (fun i (seg, child) ->   
+      |> List.iteri (fun i (seg, child) ->
         let isFirst = i = 0
-           
+
         let newScope, writerScope = renderSegmentTests seg scope isFirst (routeTree.depth) options w
         using writerScope <| fun _ ->
           renderRouteNodeCondTree child newScope options w
-          
+
         let isLast = i = numChildren - 1
         let isStringSeg = match seg with | StringSeg(_) -> true | _ -> false
         if isLast && not (isStringSeg) then
@@ -536,17 +536,17 @@ module RouteCompilation =
   let rec resolveBranchOverlap (routeTree:RouteNode) =
     match routeTree.children with
     | [] -> routeTree
-    | children -> 
+    | children ->
       match children |> List.tryFind(fun (seg, _) -> match seg with | StringSeg(_) -> true | _ -> false) with
       | Some(_, strChild) ->
-        let newChildren = 
+        let newChildren =
           children
           |> List.map (fun (seg, child) ->
             match seg with
-            | Int64Seg(_) 
+            | Int64Seg(_)
             | IntSeg(_) ->
-              seg, { child with 
-                      endPoints = child.endPoints @ strChild.endPoints 
+              seg, { child with
+                      endPoints = child.endPoints @ strChild.endPoints
                       children = child.children @ strChild.children }
             | StringSeg(_)
             | ConstantSeg(_) ->
@@ -556,23 +556,23 @@ module RouteCompilation =
         { routeTree with children = routeTree.children |> List.map (fun (seg, child) -> seg, resolveBranchOverlap child)}
 
   let renderDispatchMethods (routeTree:RouteNode) (options:RouteCompilationArgs) (w:FSharpWriter) =
-    let nodesWithLength = 
-      routeTree 
+    let nodesWithLength =
+      routeTree
       |> groupNodesByLength
       |> List.map (fun (i, routeNode) -> i, resolveBranchOverlap routeNode)
 
     let baseArgs = ["verb:string"; "path:string"]
 
-    let args = 
+    let args =
       if options.inputType then "context:'TContext" :: baseArgs
       else baseArgs
 
     let retTp =
       if options.returnType then "'TReturn"
       else "unit"
-    
+
     let argsStr = args |> String.concat ", "
-    w.StartWriteLine <| sprintf "member this.DispatchRoute(%s) : %s =" argsStr retTp 
+    w.StartWriteLine <| sprintf "member this.DispatchRoute(%s) : %s =" argsStr retTp
     using (w.indent()) (fun _ ->
       w.StartWriteLine <| "let parts = path.Split('/')"
       // Normalize starting and ending slash
@@ -588,7 +588,7 @@ module RouteCompilation =
       using (w.indent()) <| fun _ ->
         w.StartWrite("") // for the not found call below
         renderNotFoundCall options w)
-    
+
     let args2 = Array.ofList args
     args2.[args2.Length - 1] <- "uri:Uri"
     let argsStr2 = args2 |> String.concat ", "
@@ -641,10 +641,10 @@ module RouteCompilation =
         if startIdx = 0 then startIdx <- line |> Seq.findIndex (fun c -> c <> ' ')
         w.StartWriteLine <| line.Substring(startIdx)
 
-  let renderUtilities (w:FSharpWriter) = 
+  let renderUtilities (w:FSharpWriter) =
     w.StartWriteLine "module Internal ="
     using (w.indent()) <| fun _ ->
-      renderMultiLineStr w tryParseStateTypeStr 
+      renderMultiLineStr w tryParseStateTypeStr
       w.Write("\n")
       renderMultiLineStr w tryParseInt32FunStr
       w.Write("\n")
@@ -664,7 +664,7 @@ module RouteCompilation =
     w.StartWriteLine <| sprintf "module %s =" (defaultArg options.moduleName "MyModule")
     using (w.indent()) <| fun _ ->
       for k in klass.routeKlasses do renderRouteBuilder k w
-      
+
       w.Write("\n")
       renderUtilities w
 
@@ -686,10 +686,10 @@ module RouteCompilation =
         renderNotFoundHandler options w
         w.Write("\n")
         renderDispatchMethods routeTree options w
-        
+
     w.content.ToString()
-   
-  let compileRoutes (options:RouteCompilationArgs) (output:TextWriter) = 
+
+  let compileRoutes (options:RouteCompilationArgs) (output:TextWriter) =
     let routes = options.parse
     let klass = routes2Class routes options
     let routeTree = buildRouteTree routes

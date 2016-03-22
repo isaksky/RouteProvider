@@ -1,7 +1,7 @@
 ﻿namespace IsakSky.RouteProvider
 
 module Route =
-  type NamedRouteSegment = 
+  type NamedRouteSegment =
    | ConstantSeg of string
    | Int64Seg of string
    | StringSeg of string

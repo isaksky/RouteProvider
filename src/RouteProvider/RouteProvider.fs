@@ -29,11 +29,11 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
   static let _asmBytesCache = BoundedCache<string, byte[]>(10)
   static let _parserResultsCache = BoundedCache<_,_>(30)
   static let _emmiters = System.Collections.Concurrent.ConcurrentDictionary<string, RouterEmitter>()
-  
+
   do
     _assemblyResolver <- ResolveEventHandler(fun _ args ->
           let expectedName = (AssemblyName(args.Name)).Name + ".dll"
-          let asmPath = 
+          let asmPath =
               cfg.ReferencedAssemblies
               |> Seq.tryFind (fun asmPath -> IO.Path.GetFileName(asmPath) = expectedName)
           match asmPath with
@@ -77,7 +77,7 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
         override this.Attributes with get() = ParameterAttributes.Optional
         override this.RawDefaultValue with get() = "" :> obj
         override this.DefaultValue with get() = "" :> obj
-    }    
+    }
   |]
 
   static member GetOrCreateFakeAsm(typeName, tpTmpDir) =
@@ -86,7 +86,7 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
       let asm = Assembly.Load(bytes)
       asm.GetType <| "IsakSky." + typeName
     | None ->
-      let code = sprintf "namespace IsakSky { public class %s { public const bool Dummy = true; } }" typeName
+      let code = sprintf "namespace IsakSky { public class %s { } }" typeName
       let dllFile = getTmpFileName tpTmpDir "dll"
       let compilerArgs =  dict [("CompilerVersion", "v4.0")]
       let compiler = new Microsoft.CSharp.CSharpCodeProvider(compilerArgs)
@@ -113,15 +113,15 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
       member this.GetStaticParameters(typeWithoutArguments) =
         if typeWithoutArguments = typeof<RouteProvider> then
           staticParams
-        else 
+        else
           [| |]
       member this.ApplyStaticArguments(_ (*typeWithoutArguments *), typeNameWithArguments, staticArguments) =
         let dummyTypeName = typeNameWithArguments.[typeNameWithArguments.Length - 1]
 
-        let typeName, routesStr, inputType, returnType, outputPath  = 
+        let typeName, routesStr, inputType, returnType, outputPath  =
           match staticArguments with
           | [|:? string as typeName
-              :? string as routesStr 
+              :? string as routesStr
               :? bool as inputType
               :? bool as returnType
               :? string as outputPath|] ->
@@ -129,8 +129,8 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
           | _ ->
             failwithf "Bad params: %A" staticArguments
 
-        let parseResult = 
-          match _parserResultsCache.TryGet routesStr with 
+        let parseResult =
+          match _parserResultsCache.TryGet routesStr with
           | Some(p) -> p
           | None ->
             let parse = RouteParsing.parseRoutes routesStr
@@ -138,26 +138,26 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
             parse
 
         let resolvedOutputPath = resolvePath outputPath (cfg.ResolutionFolder)
-        
+
         match parseResult with
-        | RouteParsing.RouteParseResult.Failure(msg) -> 
+        | RouteParsing.RouteParseResult.Failure(msg) ->
           failwithf "%s" msg
         | RouteParsing.RouteParseResult.Success(routes) ->
-          let em = 
+          let em =
             _emmiters.GetOrAdd(resolvedOutputPath, fun resolvedOutputPath ->
-              let threadName = Threading.Thread.CurrentThread.ManagedThreadId                
+              let threadName = Threading.Thread.CurrentThread.ManagedThreadId
               //log "[RouteProvider]: Thread %d, Instance %A creating a RouterEmitter for %s" threadName (ObjectUtilities.GetInstanceId(this)) resolvedOutputPath
               let em = RouterEmitter(resolvedOutputPath)
               let listenerRef : IDisposable ref = ref null
-              let listener = em.Expired.Subscribe(fun _ -> 
+              let listener = em.Expired.Subscribe(fun _ ->
                 _emmiters.TryRemove(resolvedOutputPath) |> ignore
                 //log "[RouteProvider]: Thread %d, Instance %A shutting down RouterEmitter for %s" threadName (ObjectUtilities.GetInstanceId(this)) resolvedOutputPath
-                (!listenerRef).Dispose())                           
+                (!listenerRef).Dispose())
               listenerRef := listener
               em
             )
 
-          let routeEmitArgs = 
+          let routeEmitArgs =
             { typeName = typeName
               parse = routes
               outputPath = outputPath
@@ -183,13 +183,13 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
       member this.GetInvokerExpression(syntheticMethodBase, parameters) =
           match syntheticMethodBase with
           | :? ConstructorInfo as ctor ->
-              Quotations.Expr.NewObject(ctor, Array.toList parameters) 
+              Quotations.Expr.NewObject(ctor, Array.toList parameters)
           | :? MethodInfo as mi ->
             if mi.IsStatic then Quotations.Expr.Call(mi, Array.toList parameters)
             else Quotations.Expr.Call(parameters.[0], mi, Array.toList parameters.[1..])
           | _ ->
             let exStr = sprintf "Not Implemented: ITypeProvider.GetInvokerExpression(%A, %A)" syntheticMethodBase parameters
-            raise <| NotImplementedException(exStr) 
+            raise <| NotImplementedException(exStr)
       member this.GetGeneratedAssemblyContents(assembly) =
         assembly.GetTypes()
         |> Array.tryPick (fun typ -> _asmBytesCache.TryGet (typ.Name))

@@ -8,12 +8,12 @@ module Utility =
     static let idStart = Random().Next(Int32.MaxValue) |> Convert.ToInt64
     static let idGen = new System.Runtime.Serialization.ObjectIDGenerator()
 
-    static member GetInstanceId(o:obj) = 
+    static member GetInstanceId(o:obj) =
       let id, _ = idGen.GetId(o)
       id + idStart
 
-  let loglock = obj() 
-  let inline log fmt = 
+  let loglock = obj()
+  let inline log fmt =
     let cont (s:string) =
       let path = Path.Combine(__SOURCE_DIRECTORY__, "tp.log")
       lock loglock <| fun () ->
@@ -24,7 +24,7 @@ module Utility =
 
   let getTmpFileName folder ext =
     let rng = new Random()
-    let rec getFile attemptsLeft = 
+    let rec getFile attemptsLeft =
       let n = rng.Next(Int32.MaxValue)
       let filename = sprintf "%d.%s" n ext
       let path = Path.Combine(folder, filename)
@@ -32,13 +32,13 @@ module Utility =
         File.Open(path, FileMode.CreateNew).Dispose()
         path
       with
-      | :? IOException -> 
+      | :? IOException ->
         if attemptsLeft = 0 then reraise()
         else getFile (attemptsLeft - 1)
-      
+
     getFile 5
 
-  let resolvePath (path:string) (resolutionFolder:string) = 
+  let resolvePath (path:string) (resolutionFolder:string) =
     // TODO: Fix
     path
 

@@ -17,11 +17,11 @@ type RouterEmissionArgs = {
   returnType: bool
   nameSpace: string option
   moduleName: string option
-} 
+}
 
 type RouterEmissionMessage =
 | Enqueue of RouterEmissionArgs * AsyncReplyChannel<RouterEmissionResult>
-and RouterEmissionResult = 
+and RouterEmissionResult =
 | IgnoredStale
 | IgnoredBadExtension
 | Ok
@@ -47,7 +47,7 @@ module RouterEmitterUtils =
           allWhitespace <- false
       foundGenComment || allWhitespace
 
-type RouterEmitter(outputPath : string) = 
+type RouterEmitter(outputPath : string) =
   let expire = new Event<EventHandler,EventArgs>()
   let maxWait = 200
   let waitIncr = 50
@@ -60,11 +60,11 @@ type RouterEmitter(outputPath : string) =
   member private this.HandleMessage(emissionArgs:RouterEmissionArgs) =
     let path = emissionArgs.outputPath
     Directory.CreateDirectory(Path.GetDirectoryName(path)) |> ignore
-    try     
+    try
       use f = File.Open(emissionArgs.outputPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None)
       if not <| RouterEmitterUtils.fileIsGeneratedOrEmpty f then
         RefuseFilenameTaken
-      else 
+      else
         f.SetLength(0L)
         use sw = new StreamWriter(f)
         let compArgs = {
@@ -83,7 +83,7 @@ type RouterEmitter(outputPath : string) =
       //log "Ah, someone beat us to it."
       OkSecondaryThread
   member private this.Mail : MailboxProcessor<RouterEmissionMessage> = MailboxProcessor.Start(fun inbox ->
-    let rec loop (numSkipped, waited) = 
+    let rec loop (numSkipped, waited) =
       async {
         let! msg = inbox.TryReceive(maxWaitNoMessage)
         match msg with
@@ -104,7 +104,7 @@ type RouterEmitter(outputPath : string) =
               replyChan.Reply(IgnoredBadExtension)
             else
               if not <| File.Exists(outputFile) then
-                // Wait a little bit more before creating it, 
+                // Wait a little bit more before creating it,
                 // in case they are still working out the filename
                 do! Async.Sleep(waitNonExistantFile)
                 if inbox.CurrentQueueLength > 0 then
@@ -117,13 +117,13 @@ type RouterEmitter(outputPath : string) =
                 replyChan.Reply <| this.HandleMessage(args)
                 return! loop (numSkipped, 0)
             return! loop (numSkipped, 0)
-      }      
+      }
     loop (0, 0))
 
   member this.PostMessage(args:RouterEmissionArgs) =
     //this.Mail.PostAndReply(fun chan -> Enqueue(args, chan))
     this.Mail.PostAndReply(fun chan -> Enqueue(args, chan))
-  
+
   [<CLIEvent>]
   member this.Expired =
     expire.Publish
