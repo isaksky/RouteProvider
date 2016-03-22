@@ -4,6 +4,7 @@ VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".paket", ".paket", "{63297B98-5CED-492C-A5B7-A5B4F73CF142}"
 	ProjectSection(SolutionItems) = preProject
+		..\paket.dependencies = ..\paket.dependencies
 		paket.dependencies = paket.dependencies
 		paket.lock = paket.lock
 	EndProjectSection
@@ -14,6 +15,7 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "RouteProvider", "src\RouteP
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "project", "project", "{BF60BC93-E09B-4E5F-9D85-95A519479D54}"
 	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
 		build.fsx = build.fsx
 		project_tools.fsx = project_tools.fsx
 		README.md = README.md

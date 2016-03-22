@@ -9,8 +9,10 @@ let routesStr1 = """
   POST people
   POST people/{personId}/status/{status:string}
 """
+[<Literal>]
+let outputPath = __SOURCE_DIRECTORY__ + "Routes.fs"
 
-type Routes1 = IsakSky.RouteProvider<routesStr1>
+type Routes1 = IsakSky.RouteProvider<routesStr1, true, true, outputPath>
 
 [<Test>]
 let ``2part route`` () =

@@ -13,6 +13,7 @@
     <TargetFSharpCoreVersion>4.4.0.0</TargetFSharpCoreVersion>
     <Name>RouteProvider</Name>
     <TargetFrameworkProfile />
+    <RunPostBuildEvent>Always</RunPostBuildEvent>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -69,6 +70,20 @@
     <StartArguments>..\..\..\RouteProvider.Samples\SystemWebReturnType\SystemWebReturnType.sln</StartArguments>
     <OutputPath>bin\DebugSystemWebReturnType\</OutputPath>
   </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'DebugSpit|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <Tailcalls>false</Tailcalls>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <WarningLevel>3</WarningLevel>
+    <DocumentationFile>.\bin\Debug\RouteProvider.xml</DocumentationFile>
+    <OtherFlags>--warnon:1182</OtherFlags>
+    <StartAction>Program</StartAction>
+    <StartProgram>C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\devenv.exe</StartProgram>
+    <StartArguments>..\..\..\RouteProvider.Samples\Simple\Simple\Simple.fsproj</StartArguments>
+    <OutputPath>bin\DebugSpit\</OutputPath>
+  </PropertyGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '11.0'">
       <PropertyGroup Condition="Exists('$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\3.0\Framework\v4.0\Microsoft.FSharp.Targets')">
@@ -95,7 +110,10 @@
     <None Include="paket.template" />
     <Compile Include="Route.fs" />
     <Compile Include="RouteParsing.fs" />
-    <Compile Include="RouteCompiler.fs" />
+    <Compile Include="Utility.fs" />
+    <Compile Include="RouterCompilation.fs" />
+    <Compile Include="BoundedCache.fs" />
+    <Compile Include="RouterEmitter.fs" />
     <Compile Include="RouteProvider.fs" />
   </ItemGroup>
   <ItemGroup>
@@ -138,4 +156,42 @@
       </ItemGroup>
     </When>
   </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.0')">
+      <ItemGroup>
+        <Reference Include="FSharp.Compiler.Service">
+          <HintPath>..\..\packages\FSharp.Compiler.Service\lib\net40\FSharp.Compiler.Service.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6' Or $(TargetFrameworkVersion) == 'v4.6.1')">
+      <ItemGroup>
+        <Reference Include="FSharp.Compiler.Service">
+          <HintPath>..\..\packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <PropertyGroup>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'DebugProjTools|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <Tailcalls>false</Tailcalls>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <WarningLevel>3</WarningLevel>
+    <DocumentationFile>.\bin\Debug\RouteProvider.xml</DocumentationFile>
+    <OtherFlags>--warnon:1182</OtherFlags>
+    <StartAction>Program</StartAction>
+    <StartProgram>C:\Users\isak\dev\RouteProvider\project_tools.cmd</StartProgram>
+    <StartArguments>..\..\..\RouteProvider.Samples\Simple\Simple\Simple.fsproj</StartArguments>
+    <OutputPath>bin\DebugProjTools\</OutputPath>
+  </PropertyGroup>
 </Project>

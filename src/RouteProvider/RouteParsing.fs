@@ -2,12 +2,12 @@
 open Route
 open FParsec
 
-module RouteParsing = 
+module RouteParsing =
   let pidentifier = identifier (new IdentifierOptions())
 
   let pVerb = many1SatisfyL isAsciiUpper "1 OR more upper case letters (HTTP VERB)"
 
-  let pTypeAnnotation = pchar ':' >>? choice [attempt <| pstring "int64" >>% Int64Seg 
+  let pTypeAnnotation = pchar ':' >>? choice [attempt <| pstring "int64" >>% Int64Seg
                                               attempt <| pstring "int" >>% IntSeg
                                               pstring "string" >>% StringSeg]
 
@@ -26,8 +26,8 @@ module RouteParsing =
 
   let pConstantSeg = many1Satisfy isConstSegChar |>> ConstantSeg
 
-  let pDynSeg = 
-    pname .>>. opt pTypeAnnotation |>> fun (name, ann) -> 
+  let pDynSeg =
+    pname .>>. opt pTypeAnnotation |>> fun (name, ann) ->
     match ann with
     | Some(segFn) -> segFn name
     | None -> Int64Seg(name)
@@ -39,14 +39,23 @@ module RouteParsing =
   let pPath = sepEndBy1 pPathSeg (pchar '/')
   let pRouteName = pstringCI "AS" >>. spaces >>. pidentifier
 
-  let pRoute = 
+  let pRoute =
     tuple3
       pVerb
-      (spaces >>. pPath) 
+      (spaces >>. pPath)
       (opt (spaces >>? pRouteName))
     |>> fun (verb, segs, routeName) -> { verb=verb; routeSegments = segs; routeName = routeName }
 
   let pRoutes : Parser<_, unit> = spaces >>. sepEndBy1 pRoute spaces .>> eof
 
-  let inline testP p s =
+  let inline private testP p s =
     runParserOnString  p () "Test" s
+
+  type RouteParseResult = Success of Route list | Failure of string
+
+  let parseRoutes routesStr =
+    match runParserOnString pRoutes () "User routes" routesStr with
+    | ParserResult.Success(routes,_, _) ->
+      Success(routes)
+    | ParserResult.Failure (msg,_,_) ->
+      Failure(msg)
