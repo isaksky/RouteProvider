@@ -166,20 +166,20 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
               nameSpace = None
               moduleName = None }
 
-          let res = em.PostMessage(routeEmitArgs)
-          //log "Reply from emitter: %A" res            
-
-          match res with
-          | IgnoredStale -> 
-            RouteProviderCore.GetOrCreateFakeAsm(dummyTypeName, cfg.TemporaryFolder)
-          | IgnoredBadExtension -> 
-            failwith "Bad output file extension. Only *.fs supported"
-          | RefuseFilenameTaken -> 
-            failwithf "Refusing to overwrite file \"%s\". Filename is taken, and does not look generated." resolvedOutputPath
-          | Ok | OkSecondaryThread -> 
-            //log "Triggering invalidation..."
-            invalidation.Trigger(this, new EventArgs())
-            RouteProviderCore.GetOrCreateFakeAsm(dummyTypeName, cfg.TemporaryFolder)
+          if Assembly.GetCallingAssembly().GetName().Name <> "FSharp.LanguageService.Compiler" then
+            match em.PostMessage(routeEmitArgs) with
+            | IgnoredStale ->
+              RouteProviderCore.GetOrCreateFakeAsm(dummyTypeName, cfg.TemporaryFolder)
+            | IgnoredBadExtension ->
+              failwith "Bad output file extension. Only *.fs supported"
+            | RefuseFilenameTaken ->
+              failwithf "Refusing to overwrite file \"%s\". Filename is taken, and does not look generated." resolvedOutputPath
+            | Ok | OkSecondaryThread ->
+              //log "Triggering invalidation..."
+              invalidation.Trigger(this, new EventArgs())
+              RouteProviderCore.GetOrCreateFakeAsm(dummyTypeName, cfg.TemporaryFolder)
+            else
+              RouteProviderCore.GetOrCreateFakeAsm(dummyTypeName, cfg.TemporaryFolder)
       member this.GetInvokerExpression(syntheticMethodBase, parameters) =
           match syntheticMethodBase with
           | :? ConstructorInfo as ctor ->
