@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.23107.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "WithSuave", "WithSuave\WithSuave.fsproj", "{B6ED5692-4619-47FB-9932-E1783E189D8E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B6ED5692-4619-47FB-9932-E1783E189D8E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6ED5692-4619-47FB-9932-E1783E189D8E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6ED5692-4619-47FB-9932-E1783E189D8E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6ED5692-4619-47FB-9932-E1783E189D8E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
