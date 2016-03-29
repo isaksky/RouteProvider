@@ -478,14 +478,13 @@ module RouteCompilation =
         // as an int would otherwise prevent it from being used as a string, so rewrite
         // the scope to handle that here
         let scope =
-          (scope, endpointScope) ||> List.map2 (fun condSeg routeSeg ->
+          (List.rev scope, endpointScope) ||> List.map2 (fun condSeg routeSeg ->
             match condSeg, routeSeg with
             | (n, _), StringParam(_) -> n, routeSeg
             | condSeg, _ -> condSeg)
 
         let argStr =
           scope
-          |> List.rev
           |> List.map (function
             | _, Int64Param(name)
             | _, IntParam(name) -> name
