@@ -427,8 +427,8 @@ module RouteCompilation =
         addTree acc (n, routeParts))
       []
 
-  let inline dbgComment a (w:FSharpWriter) =
-    let pprint = sprintf "%A" a
+  let inline dbgComment (w:FSharpWriter) lbl a  =
+    let pprint = sprintf "%s\n%A" lbl a
     for line in pprint.Split([|"\r\n"; "\n" |], StringSplitOptions.None) do
       w.StartWriteLine <| sprintf "// %s" line
 
@@ -474,6 +474,9 @@ module RouteCompilation =
       endPoints |> List.iteri(fun i endP ->
         let endpointScope = endP.segments |> getDynamicParams
 
+        dbgComment w "endPointScope" endpointScope
+        dbgComment w "scope1" scope
+
         // We copy parts of the RouteNode tree in cases where a segment being parsable
         // as an int would otherwise prevent it from being used as a string, so rewrite
         // the scope to handle that here
@@ -482,6 +485,7 @@ module RouteCompilation =
             match condSeg, routeSeg with
             | (n, _), StringParam(_) -> n, routeSeg
             | condSeg, _ -> condSeg)
+        dbgComment w "scope2" scope
 
         let argStr =
           scope
@@ -489,6 +493,7 @@ module RouteCompilation =
             | _, Int64Param(name)
             | _, IntParam(name) -> name
             | n, StringParam(_) -> sprintf "(parts.[%d + start])" n)
+          |> fun ss -> if options.inputType then "context" :: ss else ss
           |> String.concat " "
 
         let keyword = if i = 0 then "if" else "elif"
@@ -579,7 +584,6 @@ module RouteCompilation =
       w.StartWriteLine <| "let endOffset = if parts.Length > 0 && parts.[parts.Length - 1] = \"\" then 1 else 0"
       w.StartWriteLine <| "match parts.Length - start - endOffset with"
       for n, node in nodesWithLength do
-        dbgComment node w
         w.StartWriteLine <| sprintf "| %d ->" n
         using (w.indent()) (fun _ ->
           renderRouteNodeCondTree node [] options w)
@@ -591,13 +595,16 @@ module RouteCompilation =
     let args2 = Array.ofList args
     args2.[args2.Length - 1] <- "uri:Uri"
     let argsStr2 = args2 |> String.concat ", "
+    let invArgs = ["verb"; "path"]
+    let invArgs = if options.inputType then "context" :: invArgs else invArgs
+    let invArgsStr = invArgs |> String.concat ", "
     w.Write("\n")
     w.StartWriteLine <| sprintf "member this.DispatchRoute(%s) : %s =" argsStr2 retTp
     using (w.indent()) <| fun _ ->
       w.StartWriteLine "// Ensure we have an Absolute Uri, or just about every method on Uri chokes"
       w.StartWriteLine "let uri = if uri.IsAbsoluteUri then uri else new Uri(Internal.fakeBaseUri, uri)"
       w.StartWriteLine "let path = uri.GetComponents(UriComponents.Path, UriFormat.Unescaped)"
-      w.StartWriteLine "this.DispatchRoute(verb, path)"
+      w.StartWriteLine <| sprintf "this.DispatchRoute(%s)" invArgsStr
 
   let tryParseStateTypeStr = """
   type TryParseState =
