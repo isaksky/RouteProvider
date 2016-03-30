@@ -10,9 +10,9 @@ let routes2 = """
 [<Literal>]
 let outputPath = __SOURCE_DIRECTORY__ + "\MyRoutes.fs"
 
-type Dummy = IsakSky.RouteProvider<"MyRoutes",routes2, false, false, outputPath>
+type Dummy = IsakSky.RouteProvider<"MyRoutes",routes2, false, false, outputPath, "Hello">
 
-open MyNamespace.MyModule
+open Hello.MyModule
 
 let router : MyRoutes =
   { getProject = fun p -> printfn "Hi project %d" p
