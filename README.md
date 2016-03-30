@@ -88,7 +88,7 @@ You can install it via Nuget:
 
 ## How does it work?
 
-It generates FSharp code. Here is an example of what would get generated for this route definition:
+It generates FSharp code and saves it to disk to the path you specify. For example, if you wanted to make a router for the following route definitions:
 
 ```FSharp
 [<Literal>]
@@ -101,7 +101,7 @@ let routes = """
 """
 ```
 
-Generated code:
+RouteProvider would then generate the following code:
 
 ```FSharp
 namespace MyNamespace
@@ -185,5 +185,4 @@ module MyModule =
 
 ### Thanks
 
-* [@pezipink](https://github.com/pezipink) for the out-of-the-box ideas around Type Providers:
-** https://skillsmatter.com/skillscasts/6159-meta-programming-madness-with-the-mixin-type-provider
+- [@pezipink](https://github.com/pezipink) for the desperately needed new ideas around Type Providers. The RouteProvider rewrite is based on the Injecting Type provider discussed here: https://skillsmatter.com/skillscasts/6159-meta-programming-madness-with-the-mixin-type-provider
