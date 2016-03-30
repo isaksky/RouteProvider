@@ -39,7 +39,8 @@ let router = {
   getProject = fun (ctx:HttpContext) projectId ->
     ctx |> OK(sprintf "Get project %d" projectId)
   updateProject = fun ctx projectId ->
-    ctx |> OK(sprintf "Update project %d" projectId)
+    let getUrlStr = MyNamespace.MyModule.getProject(projectId)
+    ctx |> OK(sprintf "Updated project %d, get it here: %s" projectId getUrlStr)
   getProjectComments = fun ctx projectName commentId ->
     ctx |> OK(sprintf "GET Project \"%s\" / Comment %d" projectName commentId)
   notFound = Some <| (fun ctx verb path ->
