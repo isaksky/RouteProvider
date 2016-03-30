@@ -78,6 +78,22 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
         override this.RawDefaultValue with get() = "" :> obj
         override this.DefaultValue with get() = "" :> obj
     }
+    { new ParameterInfo() with
+        override this.Name with get() = "nameSpace"
+        override this.Position with get() = 5
+        override this.ParameterType with get() = typeof<string>
+        override this.Attributes with get() = ParameterAttributes.Optional
+        override this.RawDefaultValue with get() = "" :> obj
+        override this.DefaultValue with get() = "" :> obj
+    }
+    { new ParameterInfo() with
+        override this.Name with get() = "moduleName"
+        override this.Position with get() = 6
+        override this.ParameterType with get() = typeof<string>
+        override this.Attributes with get() = ParameterAttributes.Optional
+        override this.RawDefaultValue with get() = "" :> obj
+        override this.DefaultValue with get() = "" :> obj
+    }
   |]
 
   static member GetOrCreateFakeAsm(typeName, tpTmpDir) =
@@ -118,14 +134,16 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
       member this.ApplyStaticArguments(_ (*typeWithoutArguments *), typeNameWithArguments, staticArguments) =
         let dummyTypeName = typeNameWithArguments.[typeNameWithArguments.Length - 1]
 
-        let typeName, routesStr, inputType, returnType, outputPath  =
+        let typeName, routesStr, inputType, returnType, outputPath, nameSpace, moduleName  =
           match staticArguments with
           | [|:? string as typeName
               :? string as routesStr
               :? bool as inputType
               :? bool as returnType
-              :? string as outputPath|] ->
-              typeName, routesStr, inputType, returnType, outputPath
+              :? string as outputPath
+              :? string as nameSpace
+              :? string as moduleName|] ->
+              typeName, routesStr, inputType, returnType, outputPath, nameSpace, moduleName
           | _ ->
             failwithf "Bad params: %A" staticArguments
 
@@ -163,8 +181,8 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
               outputPath = outputPath
               inputType = inputType
               returnType = returnType
-              nameSpace = None
-              moduleName = None }
+              nameSpace = if nameSpace = "" then None else Some(nameSpace)
+              moduleName = if moduleName = "" then None else Some(moduleName) }
 
           if Assembly.GetCallingAssembly().GetName().Name <> "FSharp.LanguageService.Compiler" then
             match em.PostMessage(routeEmitArgs) with
