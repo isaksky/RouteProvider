@@ -53,7 +53,11 @@ To integrate with the web library you are using, you can specify how the dispatc
 |   false   |    true    |```member DispatchRoute : verb:string * uri:Uri -> 'TReturn``` |
 |   true    |    true    |```member DispatchRoute : context:'TContext * verb:string * uri:Uri -> 'TReturn``` |
 
+## Installation
 
+RouteProvider can be installed via Nuget:
+
+    Install-Package RouteProvider -Pre
 
 ## Example
 
