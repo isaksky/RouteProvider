@@ -450,11 +450,11 @@ module RouteCompilation =
       scope, w.indent()
     | Int64Seg(name) ->
       let kwd = if isFirst then "if" else "elif"
-      w.StartWriteLine <| sprintf "%s Internal.tryParseInt64(parts.[%d + start], &%s_parseState, &%s) then" kwd depth name name
+      w.StartWriteLine <| sprintf "%s Int64.TryParse(parts.[%d + start], &%s) then" kwd depth name
       (depth, Int64Param(name)) :: scope, w.indent()
     | IntSeg(name) ->
       let kwd = if isFirst then "if" else "elif"
-      w.StartWriteLine <| sprintf "%s Internal.tryParseInt32(parts.[%d + start], &%s_parseState, &%s) then" kwd depth name name
+      w.StartWriteLine <| sprintf "%s Int32.TryParse(parts.[%d + start], &%s) then" kwd depth name
       (depth, IntParam(name)) :: scope, w.indent()
     | StringSeg(name) ->
       if isFirst then
@@ -506,10 +506,8 @@ module RouteCompilation =
         match cseg with
         | Int64Seg(name) ->
           w.StartWriteLine <| sprintf "let mutable %s = 0L" name
-          w.StartWriteLine <| sprintf "let mutable %s_parseState = Internal.TryParseState.Untried" name
         | IntSeg(name) ->
           w.StartWriteLine <| sprintf "let mutable %s = 0" name
-          w.StartWriteLine <| sprintf "let mutable %s_parseState = Internal.TryParseState.Untried" name
         | StringSeg(_)
         | ConstantSeg(_) -> ()
 
@@ -601,36 +599,6 @@ module RouteCompilation =
       w.StartWriteLine "let path = uri.GetComponents(UriComponents.Path, UriFormat.Unescaped)"
       w.StartWriteLine <| sprintf "this.DispatchRoute(%s)" invArgsStr
 
-  let tryParseStateTypeStr = """
-  type TryParseState =
-  | Untried = 0
-  | Success = 1
-  | Failed = 2
-  """
-
-  let tryParseInt32FunStr = """
-  let tryParseInt32 (s:string, parseState: TryParseState byref, result: int byref) =
-    match parseState with
-    | TryParseState.Failed
-    | TryParseState.Success -> ()
-    | _ ->
-      parseState <- match Int32.TryParse(s, &result) with
-      | true -> TryParseState.Success
-      | false -> TryParseState.Failed
-    parseState = TryParseState.Success
-  """
-  let tryParseInt64FunStr = """
-  let tryParseInt64 (s:string, parseState: TryParseState byref, result: int64 byref) =
-    match parseState with
-    | TryParseState.Failed
-    | TryParseState.Success -> ()
-    | _ ->
-      parseState <- match Int64.TryParse(s, &result) with
-      | true -> TryParseState.Success
-      | false -> TryParseState.Failed
-    parseState = TryParseState.Success
-  """
-
   let routeNotMatchedEx = """
   exception RouteNotMatchedException of string * string
   """
@@ -645,12 +613,6 @@ module RouteCompilation =
   let renderUtilities (w:FSharpWriter) =
     w.StartWriteLine "module Internal ="
     using (w.indent()) <| fun _ ->
-      renderMultiLineStr w tryParseStateTypeStr
-      w.Write("\n")
-      renderMultiLineStr w tryParseInt32FunStr
-      w.Write("\n")
-      renderMultiLineStr w tryParseInt64FunStr
-      w.Write("\n")
       w.StartWriteLine("let fakeBaseUri = new Uri(\"http://a.a\")")
       w.Write("\n")
       renderMultiLineStr w routeNotMatchedEx

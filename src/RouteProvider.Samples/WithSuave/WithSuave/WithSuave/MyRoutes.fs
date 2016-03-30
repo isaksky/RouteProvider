@@ -11,31 +11,6 @@ module MyModule =
       "projects/" + projectName + "comments/" + commentId.ToString()
 
   module Internal =
-    type TryParseState =
-    | Untried = 0
-    | Success = 1
-    | Failed = 2
-
-    let tryParseInt32 (s:string, parseState: TryParseState byref, result: int byref) =
-      match parseState with
-      | TryParseState.Failed
-      | TryParseState.Success -> ()
-      | _ ->
-        parseState <- match Int32.TryParse(s, &result) with
-        | true -> TryParseState.Success
-        | false -> TryParseState.Failed
-      parseState = TryParseState.Success
-
-    let tryParseInt64 (s:string, parseState: TryParseState byref, result: int64 byref) =
-      match parseState with
-      | TryParseState.Failed
-      | TryParseState.Success -> ()
-      | _ ->
-        parseState <- match Int64.TryParse(s, &result) with
-        | true -> TryParseState.Success
-        | false -> TryParseState.Failed
-      parseState = TryParseState.Success
-
     let fakeBaseUri = new Uri("http://a.a")
 
     exception RouteNotMatchedException of string * string
@@ -60,14 +35,7 @@ module MyModule =
         if String.Equals(parts.[0 + start],"projects") then
           if String.Equals(parts.[2 + start],"comments") then
             let mutable commentId = 0L
-            let mutable commentId_parseState = Internal.TryParseState.Untried
-            if Internal.tryParseInt64(parts.[3 + start], &commentId_parseState, &commentId) then
-              // endPointScope
-              // [StringParam "projectName"; Int64Param "commentId"]
-              // scope1
-              // [(3, Int64Param "commentId"); (1, StringParam "projectName")]
-              // scope2
-              // [(1, StringParam "projectName"); (3, Int64Param "commentId")]
+            if Int64.TryParse(parts.[3 + start], &commentId) then
               if verb = "GET" then this.getProjectComments context (parts.[1 + start]) commentId
               else this.HandleNotFound(context, verb, path)
             else this.HandleNotFound(context, verb, path)
@@ -76,21 +44,8 @@ module MyModule =
       | 2 ->
         if String.Equals(parts.[0 + start],"projects") then
           let mutable projectId = 0L
-          let mutable projectId_parseState = Internal.TryParseState.Untried
-          if Internal.tryParseInt64(parts.[1 + start], &projectId_parseState, &projectId) then
-            // endPointScope
-            // [Int64Param "projectId"]
-            // scope1
-            // [(1, Int64Param "projectId")]
-            // scope2
-            // [(1, Int64Param "projectId")]
+          if Int64.TryParse(parts.[1 + start], &projectId) then
             if verb = "PUT" then this.updateProject context projectId
-            // endPointScope
-            // [Int64Param "projectId"]
-            // scope1
-            // [(1, Int64Param "projectId")]
-            // scope2
-            // [(1, Int64Param "projectId")]
             elif verb = "GET" then this.getProject context projectId
             else this.HandleNotFound(context, verb, path)
           else this.HandleNotFound(context, verb, path)
