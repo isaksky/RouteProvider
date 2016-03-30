@@ -463,8 +463,6 @@ module RouteCompilation =
         w.StartWriteLine "else"
         (depth, StringParam(name))::scope, w.indent()
 
-
-
   let rec renderRouteNodeCondTree (routeTree:RouteNode) (scope:(int * DynamicParam) list) (options:RouteCompilationArgs) (w:FSharpWriter) =
     match routeTree.endPoints, routeTree.children with
     | [], [] -> failwith "Logic error"
@@ -492,7 +490,10 @@ module RouteCompilation =
           |> String.concat " "
 
         let keyword = if i = 0 then "if" else "elif"
-        w.StartWriteLine <| sprintf "%s verb = \"%s\" then this.%s %s" keyword (endP.verb) (endP.handlerName) argStr
+        let invocation =
+          if argStr.Length > 0 then sprintf "this.%s %s" (endP.handlerName) argStr
+          else sprintf "this.%s()" (endP.handlerName)
+        w.StartWriteLine <| sprintf "%s verb = \"%s\" then %s" keyword (endP.verb) invocation
         let isLast = i = numEndPoints - 1
         if isLast then
           w.StartWrite <| "else "
