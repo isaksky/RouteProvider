@@ -16,30 +16,30 @@ module Routing =
   let routes = """
     GET projects/{projectId} as getProject
   """
-  type Routes = 
-    IsakSky.RouteProvider<
-      routes, 
-      "System.Net.Http.HttpRequestMessage", // Input type name
-      "System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage>"> // Return type name
+  let [<Literal>] outputPath = __SOURCE_DIRECTORY__ + "\MyRoutes.fs"
+
+  type Dummy =
+    IsakSky.RouteProvider<"MyRoutes", routes, true, true, outputPath>
+
+  open MyNamespace.MyModule
 
   let router =
-    Routes(
-      getProject = (fun ctx projId ->
+    { getProject = fun ctx projId ->
         async {
           let msg = sprintf "You asked for proj %d" projId
           let resp = new HttpResponseMessage()
           resp.Content <- new StringContent(msg)
-          return resp } |> Async.StartAsTask),
-      notFound = (fun ctx verb path ->
+          return resp } |> Async.StartAsTask
+      notFound = Some <| fun ctx verb path ->
         async {
           let msg = sprintf "Route \"%s\" \"%s\" not found" verb path
           let resp = new HttpResponseMessage()
           resp.Content <- new StringContent(msg)
-          return resp } |> Async.StartAsTask))
+          return resp } |> Async.StartAsTask }
 
 module Internal =
-  let globalHandler = 
-    { new HttpMessageHandler() with 
+  let globalHandler =
+    { new HttpMessageHandler() with
         override this.SendAsync(request, cancellationToken) : Task<HttpResponseMessage> =
           Routing.router.DispatchRoute(request, request.Method.Method, request.RequestUri.AbsolutePath)}
 
@@ -47,10 +47,10 @@ type Global() =
     inherit System.Web.HttpApplication()
     static member RegisterWebApi(config: HttpConfiguration) =
         config.Routes.MapHttpRoute(
-          "The Right Thing (TM)", 
-          "{*url}", 
-          null, 
-          null, 
+          "The Right Thing (TM)",
+          "{*url}",
+          null,
+          null,
           (Internal.globalHandler)
            ) |> ignore
 
