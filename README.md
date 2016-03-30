@@ -49,13 +49,10 @@ To integrate with the web library you are using, you can specify how the dispatc
 
 | inputType | returnType |Dispatch method signature                |
 |-----------|------------|-----------------------------------------|
-|   false   |   false    | ```member DispatchRoute : verb:string * |
-|           |            |uri:Uri -> unit```                       |
-|   false   |    true    |```member DispatchRoute : verb:string *  |
-|           |            |uri:Uri -> 'TReturn```                   |
-|   true    |    true    |```member DispatchRoute :                |
-|           |            |context:'TContext * verb:string * uri:Uri|
-|           |            |-> 'TReturn```                           |
+|   false   |   false    |```member DispatchRoute : verb:string * uri:Uri -> unit```|
+|   false   |    true    |```member DispatchRoute : verb:string * uri:Uri -> 'TReturn``` |
+|   true    |    true    |```member DispatchRoute : context:'TContext * verb:string * uri:Uri -> 'TReturn``` |
+
 
 
 ## Example
