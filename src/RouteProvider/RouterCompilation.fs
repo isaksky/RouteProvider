@@ -466,16 +466,12 @@ module RouteCompilation =
 
 
   let rec renderRouteNodeCondTree (routeTree:RouteNode) (scope:(int * DynamicParam) list) (options:RouteCompilationArgs) (w:FSharpWriter) =
-    //dbgComment routeTree w
     match routeTree.endPoints, routeTree.children with
     | [], [] -> failwith "Logic error"
     | endPoints, [] ->
       let numEndPoints = List.length endPoints
       endPoints |> List.iteri(fun i endP ->
         let endpointScope = endP.segments |> getDynamicParams
-
-        dbgComment w "endPointScope" endpointScope
-        dbgComment w "scope1" scope
 
         // We copy parts of the RouteNode tree in cases where a segment being parsable
         // as an int would otherwise prevent it from being used as a string, so rewrite
@@ -485,7 +481,6 @@ module RouteCompilation =
             match condSeg, routeSeg with
             | (n, _), StringParam(_) -> n, routeSeg
             | condSeg, _ -> condSeg)
-        dbgComment w "scope2" scope
 
         let argStr =
           scope
