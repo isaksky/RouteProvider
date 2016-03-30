@@ -176,3 +176,7 @@ module MyModule =
       this.DispatchRoute(context, verb, path)
 ```
 
+### Thanks
+
+* [@pezipink](https://github.com/pezipink) for the out-of-the-box ideas around Type Providers:
+** https://skillsmatter.com/skillscasts/6159-meta-programming-madness-with-the-mixin-type-provider
