@@ -48,6 +48,10 @@ To integrate with the web library you are using, you can specify that you want a
     
     member DispatchRoute : context:'TContext * verb:string * uri:Uri -> 'TReturn
 
+Notice the 'TContext and 'TReturn. If you pass false, you won't get them:
+
+    member DispatchRoute : verb:string * uri:Uri -> unit
+
 ## Example
 
 Example using Suave, utilizing both input and return types:
