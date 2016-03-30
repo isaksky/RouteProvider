@@ -8,45 +8,49 @@ An F# Type provider that generates types suitable for routing in a web applicati
 [<Literal>]
 let routes = """
   GET projects/{projectId} as getProject
+  PUT projects/{foo:string} as updateProject
+  POST projects/{projectId:int} as createProject
   GET projects/{projectId}/comments/{commentId} as getProjectComments
-  PUT projects/{projectId:int} as updateProject
-  GET projects/statistics
-  GET people/{name:string} as getPerson
 """
+[<Literal>]
+let outputPath = __SOURCE_DIRECTORY__ + "\MyRoutes.fs"
 
-type MyRoutes = IsakSky.RouteProvider<routes>
+type Dummy = IsakSky.RouteProvider<
+    "MyRoutes", // name of generated type
+    routes,     // string of routes to base routes on
+    false,      // add a generic input type?
+    false,      // add a generic output type?
+    outputPath>
 
-let router = MyRoutes(
-              getProject = (fun projectId -> printfn "You asked for project %d" projectId),
-              getProjectComments = (fun projectId commentId ->
-                printfn "You asked for project %d and comment %d" projectId commentId),
-              updateProject = (fun p -> printfn "Updated project %d" p),
-              // If you don't provide a route name, one will be computed for you
-              GET__projects_statistics = (fun () -> printfn "You asked for project statistics"),
-              getPerson = (fun name -> printfn "You asked for a person called \"%s\"" name))
+open MyNamespace.MyModule
+
+let router : MyRoutes =
+  { getProject = fun p -> printfn "Hi project %d" p
+    updateProject = fun ps -> printfn "Hi project string %s" ps
+    getProjectComments = fun p c -> printfn "Hi project comment %d %d" p c
+    createProject = fun p -> printfn "Creating project %d" p
+    notFound = None }
 ```
 
 You can use ```int64```, ```int```, or ```string``` as type annotations. The default is ```int64```.
 
 Now we can use the router like this:
 
-    router.dispatchRoute("GET", "projects/4321/comments/1234")
+    router.DispatchRoute("GET", "projects/4321/comments/1234) // You can also pass a System.Uri
     -> "You asked for project 4321 and comment 1234"
 
 You can also build paths in a typed way like this:
 
-    let url = MyRoutes.Builders.getProjectComments(123L,4L)
+    let url = MyNamespace.MyModule.getProjectComments 123L 4L
     -> "/projects/123/comments/4"
     
-To integrate with the web library you are using, you can pass in a fully qualified type name as the second argument:
-
-    type Routes = IsakSky.RouteProvider<routes, "Microsoft.Owin.IOwinContext">
+To integrate with the web library you are using, you can specify that you want a generic input and output type. For example, if you pass in true for both, the signature of the Dispatch function will be like this:
     
-The generated dispatch and handler functions will then take that type as the first argument. You can also specify a type name as the third argument, which will make the dispatch function have a return type, and will require all of you handlers to return that type.
+    member DispatchRoute : context:'TContext * verb:string * uri:Uri -> 'TReturn
 
 ## Example
 
-Example with both input and return types specified:
+Example using Suave, utilizing both input and return types:
 
 ![Example](/demo.png?raw=true "Example")
 
