@@ -11,4 +11,4 @@ if errorlevel 1 (
   exit /b %errorlevel%
 )
 
-packages\FAKE\tools\FAKE.exe project_tools.fsx %*
+packages\FAKE\tools\FAKE.exe regen_doc_code.fsx %*
