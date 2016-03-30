@@ -58,6 +58,10 @@
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <ItemGroup>
     <Compile Include="BoundedCacheTests.fs" />
+    <Compile Include="MyRoutes.fs" />
+    <Compile Include="MyRoutes2.fs" />
+    <Compile Include="MyRoutes3.fs" />
+    <Compile Include="MyRoutes4.fs" />
     <Compile Include="Tests.fs" />
     <None Include="paket.references" />
   </ItemGroup>
