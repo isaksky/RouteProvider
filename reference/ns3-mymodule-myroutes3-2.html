@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8"/>
-    <title>NamedRouteSegment - RouteProvider</title>
+    <title>MyRoutes3<'TContext, 'TReturn> - RouteProvider</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <meta name="description" content=""/>
     <meta name="author" content="Isak Sky"/>
@@ -35,31 +35,31 @@
 
 
 
-<h1>NamedRouteSegment</h1>
+<h1>MyRoutes3<'TContext, 'TReturn></h1>
 <p>
-  <span>Namespace: IsakSky.RouteProvider</span><br />
-  <span>Parent Module: <a href="isaksky-routeprovider-route.html">Route</a></span>
+  <span>Namespace: Ns3</span><br />
+  <span>Parent Module: <a href="ns3-mymodule.html">MyModule</a></span>
 </p>
 <div class="xmldoc">
 </div>
-  <h3>Union Cases</h3>
+  <h3>Record Fields</h3>
   <table class="table table-bordered member-list">
     <thead>
-      <tr><td>Union Case</td><td>Description</td></tr>
+      <tr><td>Record Field</td><td>Description</td></tr>
     </thead>
     <tbody>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '97', 97)" onmouseover="showTip(event, '97', 97)">
-            ConstantSeg(string)
+          <code onmouseout="hideTip(event, '191', 191)" onmouseover="showTip(event, '191', 191)">
+            getProjAction
           </code>
-          <div class="tip" id="97">
-            <strong>Signature:</strong> string<br />
+          <div class="tip" id="191">
+            <strong>Signature:</strong> &#39;TContext -&gt; string -&gt; &#39;TReturn<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/Route.fs#L5-5" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/tests/RouteProvider.Tests/MyRoutes3.fs#L18-18" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -69,15 +69,15 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '98', 98)" onmouseover="showTip(event, '98', 98)">
-            Int64Seg(string)
+          <code onmouseout="hideTip(event, '192', 192)" onmouseover="showTip(event, '192', 192)">
+            getProjStats
           </code>
-          <div class="tip" id="98">
-            <strong>Signature:</strong> string<br />
+          <div class="tip" id="192">
+            <strong>Signature:</strong> &#39;TContext -&gt; &#39;TReturn<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/Route.fs#L6-6" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/tests/RouteProvider.Tests/MyRoutes3.fs#L17-17" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -87,15 +87,41 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '99', 99)" onmouseover="showTip(event, '99', 99)">
-            IntSeg(string)
+          <code onmouseout="hideTip(event, '193', 193)" onmouseover="showTip(event, '193', 193)">
+            notFound
           </code>
-          <div class="tip" id="99">
-            <strong>Signature:</strong> string<br />
+          <div class="tip" id="193">
+            <strong>Signature:</strong> (&#39;TContext -&gt; string -&gt; string -&gt; &#39;TReturn) option<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/Route.fs#L8-8" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/tests/RouteProvider.Tests/MyRoutes3.fs#L19-19" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <h3>Instance members</h3>
+  <table class="table table-bordered member-list">
+    <thead>
+      <tr><td>Instance member</td><td>Description</td></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '194', 194)" onmouseover="showTip(event, '194', 194)">
+            DispatchRoute(context, verb, uri)
+          </code>
+          <div class="tip" id="194">
+            <strong>Signature:</strong> (context:&#39;TContext * verb:string * uri:Uri) -&gt; &#39;TReturn<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/tests/RouteProvider.Tests/MyRoutes3.fs#L43-43" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -105,15 +131,15 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '100', 100)" onmouseover="showTip(event, '100', 100)">
-            StringSeg(string)
+          <code onmouseout="hideTip(event, '195', 195)" onmouseover="showTip(event, '195', 195)">
+            DispatchRoute(context, verb, path)
           </code>
-          <div class="tip" id="100">
-            <strong>Signature:</strong> string<br />
+          <div class="tip" id="195">
+            <strong>Signature:</strong> (context:&#39;TContext * verb:string * path:string) -&gt; &#39;TReturn<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/Route.fs#L7-7" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/tests/RouteProvider.Tests/MyRoutes3.fs#L26-26" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>

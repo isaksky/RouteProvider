@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8"/>
-    <title>NamedRouteSegment - RouteProvider</title>
+    <title>BoundedCache<'a, 'b> - RouteProvider</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <meta name="description" content=""/>
     <meta name="author" content="Isak Sky"/>
@@ -35,31 +35,56 @@
 
 
 
-<h1>NamedRouteSegment</h1>
+<h1>BoundedCache<'a, 'b></h1>
 <p>
   <span>Namespace: IsakSky.RouteProvider</span><br />
-  <span>Parent Module: <a href="isaksky-routeprovider-route.html">Route</a></span>
 </p>
 <div class="xmldoc">
 </div>
-  <h3>Union Cases</h3>
+  <h3>Constructors</h3>
   <table class="table table-bordered member-list">
     <thead>
-      <tr><td>Union Case</td><td>Description</td></tr>
+      <tr><td>Constructor</td><td>Description</td></tr>
     </thead>
     <tbody>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '97', 97)" onmouseover="showTip(event, '97', 97)">
-            ConstantSeg(string)
+          <code onmouseout="hideTip(event, '148', 148)" onmouseover="showTip(event, '148', 148)">
+            new(max)
           </code>
-          <div class="tip" id="97">
-            <strong>Signature:</strong> string<br />
+          <div class="tip" id="148">
+            <strong>Signature:</strong> max:int -&gt; BoundedCache&lt;&#39;a,&#39;b&gt;<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/Route.fs#L5-5" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/BoundedCache.fs#L6-6" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <h3>Instance members</h3>
+  <table class="table table-bordered member-list">
+    <thead>
+      <tr><td>Instance member</td><td>Description</td></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '149', 149)" onmouseover="showTip(event, '149', 149)">
+            Add(key, value)
+          </code>
+          <div class="tip" id="149">
+            <strong>Signature:</strong> (key:&#39;a * value:&#39;b) -&gt; unit<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/BoundedCache.fs#L11-11" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -69,15 +94,15 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '98', 98)" onmouseover="showTip(event, '98', 98)">
-            Int64Seg(string)
+          <code onmouseout="hideTip(event, '150', 150)" onmouseover="showTip(event, '150', 150)">
+            Get(key)
           </code>
-          <div class="tip" id="98">
-            <strong>Signature:</strong> string<br />
+          <div class="tip" id="150">
+            <strong>Signature:</strong> key:&#39;a -&gt; &#39;b<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/Route.fs#L6-6" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/BoundedCache.fs#L20-20" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -87,33 +112,15 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '99', 99)" onmouseover="showTip(event, '99', 99)">
-            IntSeg(string)
+          <code onmouseout="hideTip(event, '151', 151)" onmouseover="showTip(event, '151', 151)">
+            TryGet(key)
           </code>
-          <div class="tip" id="99">
-            <strong>Signature:</strong> string<br />
+          <div class="tip" id="151">
+            <strong>Signature:</strong> key:&#39;a -&gt; &#39;b option<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/Route.fs#L8-8" class="github-link">
-              <img src="../content/img/github.png" class="normal" />
-              <img src="../content/img/github-blue.png" class="hover" />
-            </a>
-          
-        </td>
-      </tr>
-      <tr>
-        <td class="member-name">
-
-          <code onmouseout="hideTip(event, '100', 100)" onmouseover="showTip(event, '100', 100)">
-            StringSeg(string)
-          </code>
-          <div class="tip" id="100">
-            <strong>Signature:</strong> string<br />
-                      </div>
-        </td>
-        <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/Route.fs#L7-7" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/BoundedCache.fs#L26-26" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>

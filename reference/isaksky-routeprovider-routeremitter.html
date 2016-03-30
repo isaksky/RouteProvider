@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8"/>
-    <title>NamedRouteSegment - RouteProvider</title>
+    <title>RouterEmitter - RouteProvider</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <meta name="description" content=""/>
     <meta name="author" content="Isak Sky"/>
@@ -35,31 +35,56 @@
 
 
 
-<h1>NamedRouteSegment</h1>
+<h1>RouterEmitter</h1>
 <p>
   <span>Namespace: IsakSky.RouteProvider</span><br />
-  <span>Parent Module: <a href="isaksky-routeprovider-route.html">Route</a></span>
 </p>
 <div class="xmldoc">
 </div>
-  <h3>Union Cases</h3>
+  <h3>Constructors</h3>
   <table class="table table-bordered member-list">
     <thead>
-      <tr><td>Union Case</td><td>Description</td></tr>
+      <tr><td>Constructor</td><td>Description</td></tr>
     </thead>
     <tbody>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '97', 97)" onmouseover="showTip(event, '97', 97)">
-            ConstantSeg(string)
+          <code onmouseout="hideTip(event, '170', 170)" onmouseover="showTip(event, '170', 170)">
+            new(outputPath)
           </code>
-          <div class="tip" id="97">
-            <strong>Signature:</strong> string<br />
+          <div class="tip" id="170">
+            <strong>Signature:</strong> outputPath:string -&gt; RouterEmitter<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/Route.fs#L5-5" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouterEmitter.fs#L50-50" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <h3>Instance members</h3>
+  <table class="table table-bordered member-list">
+    <thead>
+      <tr><td>Instance member</td><td>Description</td></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '171', 171)" onmouseover="showTip(event, '171', 171)">
+            add_Expired(arg1)
+          </code>
+          <div class="tip" id="171">
+            <strong>Signature:</strong> EventHandler -&gt; unit<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouterEmitter.fs#L128-128" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -69,15 +94,15 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '98', 98)" onmouseover="showTip(event, '98', 98)">
-            Int64Seg(string)
+          <code onmouseout="hideTip(event, '172', 172)" onmouseover="showTip(event, '172', 172)">
+            Expired
           </code>
-          <div class="tip" id="98">
-            <strong>Signature:</strong> string<br />
+          <div class="tip" id="172">
+            <strong>Signature:</strong> IEvent&lt;EventHandler,EventArgs&gt;<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/Route.fs#L6-6" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouterEmitter.fs#L128-128" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -87,15 +112,15 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '99', 99)" onmouseover="showTip(event, '99', 99)">
-            IntSeg(string)
+          <code onmouseout="hideTip(event, '173', 173)" onmouseover="showTip(event, '173', 173)">
+            PostMessage(args)
           </code>
-          <div class="tip" id="99">
-            <strong>Signature:</strong> string<br />
+          <div class="tip" id="173">
+            <strong>Signature:</strong> args:RouterEmissionArgs -&gt; RouterEmissionResult<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/Route.fs#L8-8" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouterEmitter.fs#L123-123" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -105,15 +130,15 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '100', 100)" onmouseover="showTip(event, '100', 100)">
-            StringSeg(string)
+          <code onmouseout="hideTip(event, '174', 174)" onmouseover="showTip(event, '174', 174)">
+            remove_Expired(arg1)
           </code>
-          <div class="tip" id="100">
-            <strong>Signature:</strong> string<br />
+          <div class="tip" id="174">
+            <strong>Signature:</strong> EventHandler -&gt; unit<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/Route.fs#L7-7" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouterEmitter.fs#L128-128" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>

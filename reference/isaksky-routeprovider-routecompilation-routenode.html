@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8"/>
-    <title>NamedRouteSegment - RouteProvider</title>
+    <title>RouteNode - RouteProvider</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <meta name="description" content=""/>
     <meta name="author" content="Isak Sky"/>
@@ -35,31 +35,31 @@
 
 
 
-<h1>NamedRouteSegment</h1>
+<h1>RouteNode</h1>
 <p>
   <span>Namespace: IsakSky.RouteProvider</span><br />
-  <span>Parent Module: <a href="isaksky-routeprovider-route.html">Route</a></span>
+  <span>Parent Module: <a href="isaksky-routeprovider-routecompilation.html">RouteCompilation</a></span>
 </p>
 <div class="xmldoc">
 </div>
-  <h3>Union Cases</h3>
+  <h3>Record Fields</h3>
   <table class="table table-bordered member-list">
     <thead>
-      <tr><td>Union Case</td><td>Description</td></tr>
+      <tr><td>Record Field</td><td>Description</td></tr>
     </thead>
     <tbody>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '97', 97)" onmouseover="showTip(event, '97', 97)">
-            ConstantSeg(string)
+          <code onmouseout="hideTip(event, '136', 136)" onmouseover="showTip(event, '136', 136)">
+            children
           </code>
-          <div class="tip" id="97">
-            <strong>Signature:</strong> string<br />
+          <div class="tip" id="136">
+            <strong>Signature:</strong> (NamedRouteSegment * RouteNode) list<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/Route.fs#L5-5" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouterCompilation.fs#L230-230" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -69,15 +69,15 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '98', 98)" onmouseover="showTip(event, '98', 98)">
-            Int64Seg(string)
+          <code onmouseout="hideTip(event, '137', 137)" onmouseover="showTip(event, '137', 137)">
+            depth
           </code>
-          <div class="tip" id="98">
-            <strong>Signature:</strong> string<br />
+          <div class="tip" id="137">
+            <strong>Signature:</strong> int<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/Route.fs#L6-6" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouterCompilation.fs#L231-231" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -87,33 +87,41 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '99', 99)" onmouseover="showTip(event, '99', 99)">
-            IntSeg(string)
+          <code onmouseout="hideTip(event, '138', 138)" onmouseover="showTip(event, '138', 138)">
+            endPoints
           </code>
-          <div class="tip" id="99">
-            <strong>Signature:</strong> string<br />
+          <div class="tip" id="138">
+            <strong>Signature:</strong> Endpoint list<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/Route.fs#L8-8" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouterCompilation.fs#L229-229" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
           
         </td>
       </tr>
+    </tbody>
+  </table>
+  <h3>Static members</h3>
+  <table class="table table-bordered member-list">
+    <thead>
+      <tr><td>Static member</td><td>Description</td></tr>
+    </thead>
+    <tbody>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '100', 100)" onmouseover="showTip(event, '100', 100)">
-            StringSeg(string)
+          <code onmouseout="hideTip(event, '139', 139)" onmouseover="showTip(event, '139', 139)">
+            Empty()
           </code>
-          <div class="tip" id="100">
-            <strong>Signature:</strong> string<br />
+          <div class="tip" id="139">
+            <strong>Signature:</strong> unit -&gt; RouteNode<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/Route.fs#L7-7" class="github-link">
+            <a href="http://github.com/isaksky/RouteProvider/tree/master/src/RouteProvider/RouterCompilation.fs#L232-232" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
