@@ -45,7 +45,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="RouteProvider">
-      <HintPath>..\..\..\RouteProvider\bin\DebugOwin\RouteProvider.dll</HintPath>
+      <HintPath>..\..\..\RouteProvider\bin\Debug\RouteProvider.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -53,6 +53,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="MyRoutes.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />
   </ItemGroup>
