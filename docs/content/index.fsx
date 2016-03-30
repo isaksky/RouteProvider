@@ -1,8 +1,9 @@
 (*** hide ***)
-// This block of code is omitted in the generated HTML documentation. Use 
+// This block of code is omitted in the generated HTML documentation. Use
 // it to define helpers that you do not want to show in the documentation.
-#I "../../bin"
-#r @"..\..\bin\RouteProvider\RouteProvider.dll"
+//#I "../../bin"
+#r @"..\..\src\RouteProvider\bin\Debug\RouteProvider.dll"
+#load "MyRoutes.fs"
 (**
 RouteProvider
 ======================
@@ -27,33 +28,39 @@ This example initializes RouteProvider with 5 different routes:
 [<Literal>]
 let routes = """
   GET projects/{projectId} as getProject
+  PUT projects/{foo:string} as updateProject
+  POST projects/{projectName:string} as createProject
   GET projects/{projectId}/comments/{commentId} as getProjectComments
-  PUT projects/{projectId:int} as updateProject
-  GET projects/statistics
-  GET people/{name:string} as getPerson
 """
 
-type MyRoutes = IsakSky.RouteProvider<routes>
+[<Literal>]
+let outputPath = __SOURCE_DIRECTORY__ + "\MyRoutes.fs"
+
+type Dummy = IsakSky.RouteProvider<"MyRoutes", // name of generated type
+    routes,     // string of routes to base routes on
+    false,      // add a generic input type?
+    false,      // add a generic output type?
+    outputPath>
+
+(** From this invocation, we'll get a type generated that looks like this *)
+open MyNamespace
+open MyNamespace.MyModule // default namespace and module names
+type HoverMe = MyRoutes // Hover the type to see the signature
 
 (**
 We can then build routes using this type in a strongly typed way:
 *)
-let path1 = MyRoutes.Builders.getProjectComments(123L,4L)
-let path2 = MyRoutes.Builders.getPerson("jack")
+let path1 = MyModule.getProjectComments 123L 4L
+let path2 = MyModule.createProject "Voltron"
 (**
 We can also create a router:
 *)
-let router =
-  MyRoutes(
-    getProject = (fun projectId -> 
-      printfn "You asked for project %d" projectId),
-    getProjectComments = (fun projectId commentId ->
-      printfn "You asked for project %d and comment %d" projectId commentId),
-    updateProject = (fun p -> 
-      printfn "Updated project %d" p),
-    // If you don't provide a route name, one will be computed for you
-    GET__projects_statistics = (fun () -> printfn "You asked for project statistics"),
-    getPerson = (fun name -> printfn "You asked for a person called \"%s\"" name))
+let router : MyRoutes =
+  { getProject = fun p -> printfn "Hi project %d" p
+    updateProject = fun ps -> printfn "Hi project string %s" ps
+    getProjectComments = fun p c -> printfn "Hi project comment %d %d" p c
+    createProject = fun p -> printfn "Creating project %d" p
+    notFound = None }
 
 (**
 We can then dispatch routes to this router like this, and the appropriate handler will be executed:
@@ -62,11 +69,7 @@ router.DispatchRoute("GET", "projects/4321/comments/1234")
 // "You asked for project 4321 and comment 1234"
 
 (**
-To integrate the router with existing projects, you can specify a fully qualified input and/or output type:
-
-<img src="/RouteProvider/img/input_and_output_types.png">
-
-As you can see above, the dispatch method and handler signatures will then be changed to accept and/or return these types.
+RouteProvider can also provide generic input arguments to integrate with web libraries. See the Suave example.
 
 Sample projects
 -----------------------
@@ -76,7 +79,7 @@ Sample projects
 
  * [ASP.Net MVC](https://github.com/isaksky/RouteProvider/blob/master/src/RouteProvider.Samples/MVC/Global.asax.fs) Taking over routing for ASP.NET MVC
 
- * [System Web](https://github.com/isaksky/RouteProvider/blob/master/src/RouteProvider.Samples/SystemWebReturnType/SystemWebReturnType/Program.fs) A basic web app, specifying a HttpListenerContext as an input type, and a string as a return type
+ * [Suave](https://github.com/isaksky/RouteProvider/blob/master/src/RouteProvider.Samples/WithSuave/WithSuave/WithSuave/Program.fs) An example with Suave, integrating by using a generic input and return type.
 
  * [API Reference](reference/index.html) automatically generated documentation for all types
 
@@ -88,22 +91,21 @@ Sample projects
  * [Input type](input_type.html)
 
  * [Input and return type](input_and_return_type.html)
- 
+
 Contributing and copyright
 --------------------------
 
-The project is hosted on [GitHub][gh] where you can [report issues][issues], fork 
-the project and submit pull requests. If you're adding a new public API, please also 
+The project is hosted on [GitHub][gh] where you can [report issues][issues], fork
+the project and submit pull requests. If you're adding a new public API, please also
 consider adding [samples][content] that can be turned into a documentation. You might
 also want to read the [library design notes][readme] to understand how it works.
 
-The library is available under Public Domain license, which allows modification and 
-redistribution for both commercial and non-commercial purposes. For more information see the 
-[License file][license] in the GitHub repository. 
+The library is available under the MIT license. For more information see the
+[License file][license] in the GitHub repository.
 
-  [content]: https://github.com/fsprojects/RouteProvider/tree/master/docs/content
-  [gh]: https://github.com/fsprojects/RouteProvider
-  [issues]: https://github.com/fsprojects/RouteProvider/issues
-  [readme]: https://github.com/fsprojects/RouteProvider/blob/master/README.md
-  [license]: https://github.com/fsprojects/RouteProvider/blob/master/LICENSE.txt
+  [content]: https://github.com/isaksky/RouteProvider/tree/master/docs/content
+  [gh]: https://github.com/isaksky/RouteProvider
+  [issues]: https://github.com/isaksky/RouteProvider/issues
+  [readme]: https://github.com/isaksky/RouteProvider/blob/master/README.md
+  [license]: https://github.com/isaksky/RouteProvider/blob/master/LICENSE.txt
 *)

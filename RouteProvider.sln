@@ -17,8 +17,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "project", "project", "{BF60
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 		build.fsx = build.fsx
-		project_tools.fsx = project_tools.fsx
 		README.md = README.md
+		regen_doc_code.fsx = regen_doc_code.fsx
 		RELEASE_NOTES.md = RELEASE_NOTES.md
 	EndProjectSection
 EndProject
@@ -33,6 +33,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "content", "content", "{8E6D
 		docs\content\index.fsx = docs\content\index.fsx
 		docs\content\input_and_return_type.md = docs\content\input_and_return_type.md
 		docs\content\input_type.md = docs\content\input_type.md
+		docs\content\MyRoutes.fs = docs\content\MyRoutes.fs
 		docs\content\notypes.md = docs\content\notypes.md
 		docs\content\tutorial.fsx = docs\content\tutorial.fsx
 	EndProjectSection

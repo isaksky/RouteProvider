@@ -1,6 +1,6 @@
 Configuration:
 
-    type MyRoutes = IsakSky.RouteProvider<routes, true, true>
+    type Dummy = IsakSky.RouteProvider<"MyRoutes", routes, true, true, "MyRoutes.fs">
 
 
 Generated code with input and return type:
