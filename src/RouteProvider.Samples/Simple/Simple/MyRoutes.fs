@@ -59,30 +59,6 @@ module MyModule =
       let start = if parts.[0] = "" then 1 else 0
       let endOffset = if parts.Length > 0 && parts.[parts.Length - 1] = "" then 1 else 0
       match parts.Length - start - endOffset with
-      // {endPoints = [];
-      //  children =
-      //   [(ConstantSeg "projects",
-      //     {endPoints = [];
-      //      children =
-      //       [(Int64Seg "projectId",
-      //         {endPoints = [];
-      //          children =
-      //           [(ConstantSeg "comments",
-      //             {endPoints = [];
-      //              children =
-      //               [(Int64Seg "commentId",
-      //                 {endPoints =
-      //                   [{verb = "GET";
-      //                     handlerName = "getProjectComments";
-      //                     segments =
-      //                      [ConstantSeg "projects"; Int64Seg "projectId";
-      //                       ConstantSeg "comments"; Int64Seg "commentId"];}];
-      //                  children = [];
-      //                  depth = 4;})];
-      //              depth = 3;})];
-      //          depth = 2;})];
-      //      depth = 1;})];
-      //  depth = 0;}
       | 4 ->
         if String.Equals(parts.[0 + start],"projects") then
           let mutable projectId = 0L
@@ -92,45 +68,18 @@ module MyModule =
               let mutable commentId = 0L
               let mutable commentId_parseState = Internal.TryParseState.Untried
               if Internal.tryParseInt64(parts.[3 + start], &commentId_parseState, &commentId) then
+                // endPointScope
+                // [Int64Param "projectId"; Int64Param "commentId"]
+                // scope1
+                // [(3, Int64Param "commentId"); (1, Int64Param "projectId")]
+                // scope2
+                // [(1, Int64Param "projectId"); (3, Int64Param "commentId")]
                 if verb = "GET" then this.getProjectComments projectId commentId
                 else this.HandleNotFound(verb, path)
               else this.HandleNotFound(verb, path)
             else this.HandleNotFound(verb, path)
           else this.HandleNotFound(verb, path)
         else this.HandleNotFound(verb, path)
-      // {endPoints = [];
-      //  children =
-      //   [(ConstantSeg "projects",
-      //     {endPoints = [];
-      //      children =
-      //       [(IntSeg "intArgDepth_1",
-      //         {endPoints =
-      //           [{verb = "POST";
-      //             handlerName = "createProject";
-      //             segments = [ConstantSeg "projects"; IntSeg "projectId"];};
-      //            {verb = "PUT";
-      //             handlerName = "updateProject";
-      //             segments = [ConstantSeg "projects"; StringSeg "foo"];}];
-      //          children = [];
-      //          depth = 2;});
-      //        (StringSeg "foo",
-      //         {endPoints = [{verb = "PUT";
-      //                        handlerName = "updateProject";
-      //                        segments = [ConstantSeg "projects"; StringSeg "foo"];}];
-      //          children = [];
-      //          depth = 2;});
-      //        (Int64Seg "int64ArgDepth_1",
-      //         {endPoints =
-      //           [{verb = "GET";
-      //             handlerName = "getProject";
-      //             segments = [ConstantSeg "projects"; Int64Seg "projectId"];};
-      //            {verb = "PUT";
-      //             handlerName = "updateProject";
-      //             segments = [ConstantSeg "projects"; StringSeg "foo"];}];
-      //          children = [];
-      //          depth = 2;})];
-      //      depth = 1;})];
-      //  depth = 0;}
       | 2 ->
         if String.Equals(parts.[0 + start],"projects") then
           let mutable int64ArgDepth_1 = 0L
@@ -138,14 +87,44 @@ module MyModule =
           let mutable intArgDepth_1 = 0
           let mutable intArgDepth_1_parseState = Internal.TryParseState.Untried
           if Internal.tryParseInt64(parts.[1 + start], &int64ArgDepth_1_parseState, &int64ArgDepth_1) then
+            // endPointScope
+            // [Int64Param "projectId"]
+            // scope1
+            // [(1, Int64Param "int64ArgDepth_1")]
+            // scope2
+            // [(1, Int64Param "int64ArgDepth_1")]
             if verb = "GET" then this.getProject int64ArgDepth_1
+            // endPointScope
+            // [StringParam "foo"]
+            // scope1
+            // [(1, Int64Param "int64ArgDepth_1")]
+            // scope2
+            // [(1, StringParam "foo")]
             elif verb = "PUT" then this.updateProject (parts.[1 + start])
             else this.HandleNotFound(verb, path)
           elif Internal.tryParseInt32(parts.[1 + start], &intArgDepth_1_parseState, &intArgDepth_1) then
+            // endPointScope
+            // [IntParam "projectId"]
+            // scope1
+            // [(1, IntParam "intArgDepth_1")]
+            // scope2
+            // [(1, IntParam "intArgDepth_1")]
             if verb = "POST" then this.createProject intArgDepth_1
+            // endPointScope
+            // [StringParam "foo"]
+            // scope1
+            // [(1, IntParam "intArgDepth_1")]
+            // scope2
+            // [(1, StringParam "foo")]
             elif verb = "PUT" then this.updateProject (parts.[1 + start])
             else this.HandleNotFound(verb, path)
           else
+            // endPointScope
+            // [StringParam "foo"]
+            // scope1
+            // [(1, StringParam "foo")]
+            // scope2
+            // [(1, StringParam "foo")]
             if verb = "PUT" then this.updateProject (parts.[1 + start])
             else this.HandleNotFound(verb, path)
         else this.HandleNotFound(verb, path)
