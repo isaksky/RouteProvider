@@ -36,7 +36,7 @@ module RouteParsing =
 
   let pPathSeg = choice [ pConstantSeg; pDynamicPathSeg ]
 
-  let pPath = sepEndBy1 pPathSeg (pchar '/')
+  let pPath = opt (pchar '/') >>. sepEndBy1 pPathSeg (pchar '/')
   let pRouteName = pstringCI "AS" >>. spaces >>. pidentifier
 
   let pRoute =
