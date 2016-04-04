@@ -9,6 +9,7 @@ module RouteParsing =
 
   let pTypeAnnotation = pchar ':' >>? choice [attempt <| pstring "int64" >>% Int64Seg
                                               attempt <| pstring "int" >>% IntSeg
+                                              attempt <| pstring "Guid" >>% GuidSeg
                                               pstring "string" >>% StringSeg]
 
   let isNameStart c = isLetter (c) || c = '_'

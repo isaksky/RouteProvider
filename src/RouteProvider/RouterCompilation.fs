@@ -36,6 +36,7 @@ module RouteCompilation =
     | Int64Param of string
     | IntParam of string
     | StringParam of string
+    | GuidParam of string
   and FunctionParam = | FunctionParam of DynamicParam
   and HandlerCtorParam =
     { name: string
@@ -60,7 +61,8 @@ module RouteCompilation =
         | ConstantSeg(_) -> None
         | Int64Seg(name) -> Some(FunctionParam(Int64Param(name)))
         | IntSeg(name) -> Some(FunctionParam(IntParam(name)))
-        | StringSeg(name) -> Some(FunctionParam(StringParam(name))))
+        | StringSeg(name) -> Some(FunctionParam(StringParam(name)))
+        | GuidSeg(name) -> Some(FunctionParam(GuidParam(name))))
       (route.routeSegments)
 
   let routeSubClass (route:Route) =
@@ -80,7 +82,8 @@ module RouteCompilation =
                         | Int64Seg(name) -> Some(FunctionParam(Int64Param(name)))
                         | IntSeg(name) -> Some(FunctionParam(IntParam(name)))
                         | StringSeg(name) -> Some(FunctionParam(StringParam(name)))
-                        | _ -> None)
+                        | GuidSeg(name) -> Some(FunctionParam(GuidParam(name)))
+                        | ConstantSeg(_) -> None)
                       (route.routeSegments)) }
 
   let makeCtor (routes:Route list) =
@@ -144,7 +147,8 @@ module RouteCompilation =
         |> List.map (function
           | FunctionParam(Int64Param(name)) -> sprintf "(%s:int64)" (quoteIfNeeded name)
           | FunctionParam(IntParam(name)) -> sprintf "(%s:int)" (quoteIfNeeded name)
-          | FunctionParam(StringParam(name)) -> sprintf "(%s:string)" (quoteIfNeeded name))
+          | FunctionParam(StringParam(name)) -> sprintf "(%s:string)" (quoteIfNeeded name)
+          | FunctionParam(GuidParam(name)) -> sprintf "(%s:Guid)" (quoteIfNeeded name))
       let argStr = argStrs |> String.concat " "
       w.Write <| sprintf "%s =\n" argStr
 
@@ -161,7 +165,7 @@ module RouteCompilation =
             mkRouteBuilder segs tmpConsts ret
           | seg::segs ->
             let name = match seg with
-                       | Int64Seg(name) | IntSeg(name) | StringSeg(name) -> name
+                       | Int64Seg(name) | IntSeg(name) | StringSeg(name) | GuidSeg(name) -> name
                        | ConstantSeg(_) -> failwith "Logic error"
 
             if tmpConsts.Count > 0 then
@@ -172,6 +176,7 @@ module RouteCompilation =
               match seg with
               | Int64Seg(_)
               | IntSeg(_) -> sprintf "%s.ToString()" name
+              | GuidSeg(_) -> sprintf "%s.ToString(\"D\")" name
               | StringSeg(_) -> name
               | ConstantSeg(_) -> failwith "Logic error"
 
@@ -184,6 +189,7 @@ module RouteCompilation =
     | Int64Param(_) -> "int64"
     | IntParam(_) -> "int"
     | StringParam(_) -> "string"
+    | GuidParam(_) -> "Guid"
 
   let paramListTypeString (paramList: DynamicParam list) (options:RouteCompilationArgs) =
     let fnTypes = paramList |> List.map dynParamTypeName |> ResizeArray
@@ -247,7 +253,7 @@ module RouteCompilation =
       let child = seg, (buildNode endPoint segs (depth + 1))
       { endPoints = []; children = [child]; depth = depth; }
 
-  let rec addRoute (routeNode:RouteNode) (endPoint:Endpoint) (segsRemaining: NamedRouteSegment list) (depth: int) =
+  let rec addRoute (routeNode:RouteNode) (endPoint:Endpoint) (segsRemaining:NamedRouteSegment list) (depth:int) =
     match segsRemaining with
     | [] ->
       { routeNode with endPoints = routeNode.endPoints @ [endPoint] }
@@ -270,7 +276,7 @@ module RouteCompilation =
               child)
         { routeNode with children = updatedChildren }
 
-  let buildRouteTree (routes: Route list) =
+  let buildRouteTree (routes:Route list) =
     let rec addRouteF routeNode routes =
       match routes with
       | route :: routes ->
@@ -317,7 +323,8 @@ module RouteCompilation =
       | IntSeg(name) -> Some <| IntParam(name)
       | Int64Seg(name) -> Some <| Int64Param(name)
       | StringSeg(name) -> Some <| StringParam(name)
-      | ConstantSeg(name) -> None)
+      | GuidSeg(name) -> Some <| GuidParam(name)
+      | ConstantSeg(_) -> None)
 
   let captureEq (seg1:NamedRouteSegment) (seg2:NamedRouteSegment) =
     match seg1, seg2 with
@@ -325,12 +332,14 @@ module RouteCompilation =
     | Int64Seg(_), Int64Seg(_) -> true
     | IntSeg(_), IntSeg(_) -> true
     | StringSeg(_), StringSeg(_) -> true
+    | GuidSeg(_), GuidSeg(_) -> true
     | _ -> false
 
   let segAssigns (seg:NamedRouteSegment) =
     match seg with
     | Int64Seg(_)
-    | IntSeg(_)-> true
+    | IntSeg(_)
+    | GuidSeg(_) -> true
     | _ -> false
 
   let segName (seg:NamedRouteSegment) =
@@ -338,6 +347,7 @@ module RouteCompilation =
     | Int64Seg(name)
     | IntSeg(name)
     | StringSeg(name)
+    | GuidSeg(name)
     | ConstantSeg(name) -> name
 
   let assignNameClash (seg1:NamedRouteSegment) (seg2:NamedRouteSegment) =
@@ -350,6 +360,7 @@ module RouteCompilation =
     | Int64Seg(_) -> Int64Seg(sprintf "int64ArgDepth_%d" depth)
     | IntSeg(_) -> IntSeg(sprintf "intArgDepth_%d" depth)
     | StringSeg(_) -> StringSeg(sprintf "stringArgDepth_%d" depth)
+    | GuidSeg(_) -> GuidSeg(sprintf "guidArgDepth_%d" depth)
     | _ -> failwith "Logic error"
 
   let resolveNameClashes (seg:NamedRouteSegment) (routeTree:RouteNode) =
@@ -363,8 +374,7 @@ module RouteCompilation =
           if Object.ReferenceEquals(tmpSeg, seg2) then
             newSeg2, c
           else
-            tmpSeg, c
-        )
+            tmpSeg, c)
       newSeg, { routeTree with children = newChildren }
     | None -> seg, routeTree
 
@@ -393,6 +403,7 @@ module RouteCompilation =
           { routeTree with children = updatedChildren }
         | None ->
           { routeTree with children = (seg, buildRouteNode(routeTree.depth + 1, segs, endpoint)) :: routeTree.children }
+
     and buildRouteNode (startDepth: int, segs:NamedRouteSegment list, endpoint:Endpoint) =
       segs
       |> List.rev
@@ -436,6 +447,7 @@ module RouteCompilation =
     | ConstantSeg(_) -> 10
     | Int64Seg(_) -> 20
     | IntSeg(_) -> 30
+    | GuidSeg(_) -> 35
     | StringSeg(_) -> 40
 
   let noOptDisp =
@@ -443,18 +455,19 @@ module RouteCompilation =
           member y.Dispose() = () }
 
   let renderSegmentTests (seg:NamedRouteSegment) (scope:(int * DynamicParam) list) (isFirst:bool) (depth:int) (_:RouteCompilationArgs) (w:FSharpWriter) =
+    let kwd = if isFirst then "if" else "elif"
     match seg with
     | ConstantSeg(name) ->
-      let kwd = if isFirst then "if" else "elif"
       w.StartWriteLine <| sprintf "%s String.Equals(parts.[%d + start],\"%s\") then" kwd depth name
       scope, w.indent()
     | Int64Seg(name) ->
-      let kwd = if isFirst then "if" else "elif"
       w.StartWriteLine <| sprintf "%s Int64.TryParse(parts.[%d + start], &%s) then" kwd depth name
       (depth, Int64Param(name)) :: scope, w.indent()
     | IntSeg(name) ->
-      let kwd = if isFirst then "if" else "elif"
       w.StartWriteLine <| sprintf "%s Int32.TryParse(parts.[%d + start], &%s) then" kwd depth name
+      (depth, IntParam(name)) :: scope, w.indent()
+    | GuidSeg(name) ->
+      w.StartWriteLine <| sprintf "%s Guid.TryParseExact(parts.[%d + start], \"D\", &%s) then" kwd depth name
       (depth, IntParam(name)) :: scope, w.indent()
     | StringSeg(name) ->
       if isFirst then
@@ -484,7 +497,8 @@ module RouteCompilation =
           scope
           |> List.map (function
             | _, Int64Param(name)
-            | _, IntParam(name) -> name
+            | _, IntParam(name)
+            | _, GuidParam(name)-> name
             | n, StringParam(_) -> sprintf "(parts.[%d + start])" n)
           |> fun ss -> if options.inputType then "context" :: ss else ss
           |> String.concat " "
@@ -509,6 +523,8 @@ module RouteCompilation =
           w.StartWriteLine <| sprintf "let mutable %s = 0L" name
         | IntSeg(name) ->
           w.StartWriteLine <| sprintf "let mutable %s = 0" name
+        | GuidSeg(name) ->
+          w.StartWriteLine <| sprintf "let mutable %s = Guid.Empty" name
         | StringSeg(_)
         | ConstantSeg(_) -> ()
 
@@ -546,6 +562,7 @@ module RouteCompilation =
               seg, { child with
                       endPoints = child.endPoints @ strChild.endPoints
                       children = child.children @ strChild.children }
+            | GuidSeg(_)
             | StringSeg(_)
             | ConstantSeg(_) ->
               seg, child)

@@ -7,8 +7,8 @@ module MyModule =
       "projects/" + projectId.ToString()
   let updateProject (foo:string) =
       "projects/" + foo
-  let createProject (projectId:int) =
-      "projects/" + projectId.ToString()
+  let createProject (projectId:Guid) =
+      "projects/" + projectId.ToString("D")
   let getProjectComments (projectId:int64) (commentId:int64) =
       "projects/" + projectId.ToString() + "comments/" + commentId.ToString()
 
@@ -20,7 +20,7 @@ module MyModule =
   type MyRoutes =
     { getProject: int64->unit
       updateProject: string->unit
-      createProject: int->unit
+      createProject: Guid->unit
       getProjectComments: int64->int64->unit
       notFound: (string->string->unit) option }
 
@@ -50,14 +50,13 @@ module MyModule =
       | 2 ->
         if String.Equals(parts.[0 + start],"projects") then
           let mutable int64ArgDepth_1 = 0L
-          let mutable intArgDepth_1 = 0
+          let mutable guidArgDepth_1 = Guid.Empty
           if Int64.TryParse(parts.[1 + start], &int64ArgDepth_1) then
             if verb = "GET" then this.getProject int64ArgDepth_1
             elif verb = "PUT" then this.updateProject (parts.[1 + start])
             else this.HandleNotFound(verb, path)
-          elif Int32.TryParse(parts.[1 + start], &intArgDepth_1) then
-            if verb = "POST" then this.createProject intArgDepth_1
-            elif verb = "PUT" then this.updateProject (parts.[1 + start])
+          elif Guid.TryParseExact(parts.[1 + start], "D", &guidArgDepth_1) then
+            if verb = "POST" then this.createProject guidArgDepth_1
             else this.HandleNotFound(verb, path)
           else
             if verb = "PUT" then this.updateProject (parts.[1 + start])

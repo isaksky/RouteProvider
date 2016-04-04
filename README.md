@@ -32,7 +32,7 @@ let router : MyRoutes =
     notFound = None }
 ```
 
-You can use ```int64```, ```int```, or ```string``` as type annotations. The default is ```int64```.
+You can use ```int64```, ```int```, ```Guid``` (as of 0.0.6), or ```string``` as type annotations. The default is ```int64```.
 
 Now we can use the router like this:
 
@@ -68,9 +68,6 @@ Example using Suave, utilizing both input and return types:
 ## Brief demo in visual studio:
 
 https://youtu.be/QTDNGyVx5Vo
-
-## Roadmap / planned features
-- Add support for Guids
 
 ## Comparison with other approaches
 

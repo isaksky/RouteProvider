@@ -4,7 +4,7 @@
 let routes2 = """
   GET projects/{projectId} as getProject
   PUT projects/{foo:string} as updateProject
-  POST projects/{projectId:int} as createProject
+  POST projects/{projectId:Guid} as createProject
   GET projects/{projectId}/comments/{commentId} as getProjectComments
 """
 [<Literal>]
@@ -18,5 +18,5 @@ let router : MyRoutes =
   { getProject = fun p -> printfn "Hi project %d" p
     updateProject = fun ps -> printfn "Hi project string %s" ps
     getProjectComments = fun p c -> printfn "Hi project comment %d %d" p c
-    createProject = fun p -> printfn "Creating project %d" p
+    createProject = fun p -> printfn "Creating project %A" p
     notFound = None }
