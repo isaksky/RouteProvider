@@ -62,6 +62,7 @@
     <Compile Include="MyRoutes2.fs" />
     <Compile Include="MyRoutes3.fs" />
     <Compile Include="MyRoutes4.fs" />
+    <Compile Include="MyRoutes5.fs" />
     <Compile Include="Tests.fs" />
     <None Include="paket.references" />
   </ItemGroup>

@@ -154,3 +154,29 @@ let ``conflicting routes ordering`` () =
 
   let resp3 = router.DispatchRoute("GET", "/projects/1")
   Assert.AreEqual(resp3, "1")
+
+[<Literal>]
+let routesStr5 = """
+  GET /projects/{projectId:int} as getProjectInt
+  GET /projects/{projectId:int64} as getProjectInt64
+  GET /projects/{projectId:Guid} as getProjectGuid
+  GET /projects/{projectId:string} as getProjectString
+"""
+let [<Literal>] outputPath5 = __SOURCE_DIRECTORY__ + "\MyRoutes5.fs"
+type Routes5 = IsakSky.RouteProvider<"MyRoutes5", routesStr5, false, true, outputPath5, "Ns5">
+open Ns5.MyModule
+
+[<Test>]
+let ``guid routes work`` () =
+  let router =
+    {
+      MyRoutes5.getProjectInt = fun _ -> None
+      getProjectInt64 = fun _ -> None
+      getProjectGuid = fun g -> Some(g)
+      getProjectString = fun _ -> None
+      notFound = None
+    }
+  let sampGuid = System.Guid.NewGuid()
+  let resp = router.DispatchRoute("GET", "/projects/" + sampGuid.ToString("D"))
+  Assert.IsTrue(resp.IsSome)
+  Assert.AreEqual(sampGuid, resp.Value)
