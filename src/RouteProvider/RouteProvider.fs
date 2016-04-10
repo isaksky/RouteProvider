@@ -28,7 +28,7 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
   let mutable _assemblyResolver : ResolveEventHandler = null
   static let _asmBytesCache = BoundedCache<string, byte[]>(10)
   static let _parserResultsCache = BoundedCache<_,_>(30)
-  static let _emmiters = System.Collections.Concurrent.ConcurrentDictionary<string, RouterEmitter>()
+  static let _emmiters = ConcurrentDictionary<string, RouterEmitter>(2, 10)
 
   do
     _assemblyResolver <- ResolveEventHandler(fun _ args ->
