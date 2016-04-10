@@ -80,7 +80,6 @@ type RouterEmitter(outputPath : string) =
         Ok
     with
     | :? System.IO.IOException ->
-      //log "Ah, someone beat us to it."
       OkSecondaryThread
   member private this.Mail : MailboxProcessor<RouterEmissionMessage> = MailboxProcessor.Start(fun inbox ->
     let rec loop (numSkipped, waited) =

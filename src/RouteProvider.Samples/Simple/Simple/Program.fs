@@ -20,3 +20,10 @@ let router : MyRoutes =
     getProjectComments = fun p c -> printfn "Hi project comment %d %d" p c
     createProject = fun p -> printfn "Creating project %A" p
     notFound = None }
+
+let router2 =
+  MyRoutes.Router(
+    getProject = (fun p -> printfn "P %d" p),
+    updateProject = (fun ps -> printfn "hi %s" ps),
+    createProject = (fun p -> printfn "Create project %A" p),
+    getProjectComments = (fun p c -> printfn "Hi %d %d" p c))

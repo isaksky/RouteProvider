@@ -66,7 +66,7 @@ Generated code:
               let mutable int64ArgDepth_1 = 0L
               let mutable intArgDepth_1 = 0
               if String.Equals(parts.[1 + start],"statistics") then
-                if verb = "GET" then this.GET__projects_statistics 
+                if verb = "GET" then this.GET__projects_statistics()
                 else this.HandleNotFound(verb, path)
               elif Int64.TryParse(parts.[1 + start], &int64ArgDepth_1) then
                 if verb = "GET" then this.getProject int64ArgDepth_1
@@ -85,4 +85,17 @@ Generated code:
           let path = uri.GetComponents(UriComponents.Path, UriFormat.Unescaped)
           this.DispatchRoute(verb, path)
     
+        static member Router(
+          getProject: int64->unit,
+          getProjectComments: int64->int64->unit,
+          updateProject: int->unit,
+          GET__projects_statistics: unit->unit,
+          getPerson: string->unit,
+          ?notFound: string->string->unit) : MyRoutes =
+          { getProject = getProject
+            getProjectComments = getProjectComments
+            updateProject = updateProject
+            GET__projects_statistics = GET__projects_statistics
+            getPerson = getPerson
+            notFound = notFound}
     

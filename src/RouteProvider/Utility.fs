@@ -37,8 +37,3 @@ module Utility =
         else getFile (attemptsLeft - 1)
 
     getFile 5
-
-  let resolvePath (path:string) (resolutionFolder:string) =
-    // TODO: Fix
-    path
-

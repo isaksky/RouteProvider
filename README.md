@@ -30,9 +30,10 @@ let router : MyRoutes =
     getProjectComments = fun p c -> printfn "Hi project comment %d %d" p c
     createProject = fun p -> printfn "Creating project %d" p
     notFound = None }
+// You can also use ```MyRoutes.Router``` to create the router, which may be more IDE friendly.
 ```
 
-You can use ```int64```, ```int```, ```Guid``` (as of 0.0.6), or ```string``` as type annotations. The default is ```int64```.
+You can use ```int64```, ```int```, ```Guid```, or ```string``` as type annotations. The default is ```int64```.
 
 Now we can use the router like this:
 

@@ -62,3 +62,14 @@ module MyModule =
       let uri = if uri.IsAbsoluteUri then uri else new Uri(Internal.fakeBaseUri, uri)
       let path = uri.GetComponents(UriComponents.Path, UriFormat.Unescaped)
       this.DispatchRoute(verb, path)
+
+    static member Router(getProjectInt: int->'TReturn,
+                         getProjectInt64: int64->'TReturn,
+                         getProjectGuid: Guid->'TReturn,
+                         getProjectString: string->'TReturn,
+                         ?notFound: string->string->'TReturn) : MyRoutes5<_> =
+      { getProjectInt = getProjectInt
+        getProjectInt64 = getProjectInt64
+        getProjectGuid = getProjectGuid
+        getProjectString = getProjectString
+        notFound = notFound}

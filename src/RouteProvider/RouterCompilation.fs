@@ -208,11 +208,12 @@ module RouteCompilation =
     StringParam("path")
   ]
 
-  let notFoundCtorStr (options:RouteCompilationArgs) =
+  let notFoundCtorStr (options:RouteCompilationArgs) inRecord =
     let typeStr = paramListTypeString notFoundHandlerParams options
-    sprintf "notFound: (%s) option" typeStr
+    let delim = if inRecord then ":" else " ="
+    sprintf "notFound%s (%s) option" delim typeStr
 
-  let renderRecordValues (klassName:string) (ctorParams:HandlerCtorParam list) (options:RouteCompilationArgs) (w:FSharpWriter) =
+  let renderRecordValues (ctorParams:HandlerCtorParam list) (options:RouteCompilationArgs) (w:FSharpWriter) =
     w.StartWrite "{"
 
     let ctorParams = ctorParams |> Array.ofList
@@ -228,8 +229,44 @@ module RouteCompilation =
         w.StartWrite <| sprintf "%s%s: %s" spaces (ctorParam.name) (paramListTypeString ctorArgs options)
 
       w.Write("\n")
-    w.StartWrite <| sprintf "%s%s" (new String(' ', w.IndentSize)) (notFoundCtorStr options)
+    w.StartWrite <| sprintf "%s%s" (new String(' ', w.IndentSize)) (notFoundCtorStr options true)
     w.Write(" }")
+
+  let renderCreateFunction (klassName:string) (ctorParams:HandlerCtorParam list) (options:RouteCompilationArgs) (w:FSharpWriter) =
+    let retTypeStr =
+      if options.inputType && options.returnType then klassName + "<_,_>"
+      elif options.inputType || options.returnType then klassName + "<_>"
+      else klassName
+
+    let notFoundFnStr = paramListTypeString notFoundHandlerParams options
+    let fnStartStr = "static member Router("
+    w.StartWrite fnStartStr
+
+    let ctorParams = ctorParams |> Array.ofList
+    let fnArgSpaces = new String(' ', fnStartStr.Length)
+    for i in [0..ctorParams.Length - 1] do
+      let ctorParam = ctorParams.[i]
+      let ctorArgs = ctorParam.handlerArgs |> List.map (function | FunctionParam(p) -> p)
+      let sp = if i = 0 then "" else fnArgSpaces
+      let wr = if i = 0 then w.Write else w.StartWrite
+      wr <| sprintf "%s%s: %s" sp (ctorParam.name) (paramListTypeString ctorArgs options)
+      w.Write(",\n")
+
+    w.StartWrite <| sprintf "%s?notFound: %s" fnArgSpaces notFoundFnStr
+    w.Write <| sprintf ") : %s =\n" retTypeStr
+    using (w.indent()) <| fun _ ->
+      w.StartWrite "{"
+      for i in [0..ctorParams.Length - 1] do
+        let ctorParam = ctorParams.[i]
+
+        if i = 0 then
+          let spaces = new String(' ', w.IndentSize - 1) // take already written opening brace into account
+          w.Write <| sprintf "%s%s = %s\n" spaces (ctorParam.name) (ctorParam.name)
+        else
+          let spaces = new String(' ', w.IndentSize)
+          w.StartWrite <| sprintf "%s%s = %s\n" spaces (ctorParam.name) (ctorParam.name)
+      w.StartWrite <| sprintf "%snotFound = notFound" (new String(' ', w.IndentSize))
+      w.Write "}"
 
   type RouteNode =
     { endPoints: Endpoint list
@@ -660,13 +697,15 @@ module RouteCompilation =
       using (w.indent()) <| fun _ ->
         match klass.ctor with
         | Some(ctorParams) ->
-          renderRecordValues (klass.name) ctorParams options w
+          renderRecordValues ctorParams options w
         | None -> failwith "Missing ctor"
         System.Diagnostics.Debug.Print <| sprintf "RouteTree:\n\n%A" routeTree
         w.Write("\n\n")
         renderNotFoundHandler options w
         w.Write("\n")
         renderDispatchMethods routeTree options w
+        w.Write("\n")
+        renderCreateFunction (klass.name) (klass.ctor.Value) options w
 
     w.content.ToString()
 

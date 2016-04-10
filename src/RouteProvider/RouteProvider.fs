@@ -155,15 +155,14 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
             _parserResultsCache.Add((routesStr), parse)
             parse
 
-        let resolvedOutputPath = resolvePath outputPath (cfg.ResolutionFolder)
-
+        // log "[RouteProvider] emittersCount %d" (_emmiters.Count)
         match parseResult with
         | RouteParsing.RouteParseResult.Failure(msg) ->
           failwithf "%s" msg
         | RouteParsing.RouteParseResult.Success(routes) ->
           let em =
-            _emmiters.GetOrAdd(resolvedOutputPath, fun resolvedOutputPath ->
-              let threadName = Threading.Thread.CurrentThread.ManagedThreadId
+            _emmiters.GetOrAdd(outputPath, fun resolvedOutputPath ->
+              //let threadName = Threading.Thread.CurrentThread.ManagedThreadId
               //log "[RouteProvider]: Thread %d, Instance %A creating a RouterEmitter for %s" threadName (ObjectUtilities.GetInstanceId(this)) resolvedOutputPath
               let em = RouterEmitter(resolvedOutputPath)
               let listenerRef : IDisposable ref = ref null
@@ -172,8 +171,7 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
                 //log "[RouteProvider]: Thread %d, Instance %A shutting down RouterEmitter for %s" threadName (ObjectUtilities.GetInstanceId(this)) resolvedOutputPath
                 (!listenerRef).Dispose())
               listenerRef := listener
-              em
-            )
+              em)
 
           let routeEmitArgs =
             { typeName = typeName
@@ -191,7 +189,7 @@ type RouteProviderCore(cfg: TypeProviderConfig) =
             | IgnoredBadExtension ->
               failwith "Bad output file extension. Only *.fs supported"
             | RefuseFilenameTaken ->
-              failwithf "Refusing to overwrite file \"%s\". Filename is taken, and does not look generated." resolvedOutputPath
+              failwithf "Refusing to overwrite file \"%s\". Filename is taken, and does not look generated." outputPath
             | Ok | OkSecondaryThread ->
               //log "Triggering invalidation..."
               invalidation.Trigger(this, new EventArgs())

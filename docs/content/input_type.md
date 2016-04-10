@@ -85,4 +85,17 @@ Generated code with input type:
           let path = uri.GetComponents(UriComponents.Path, UriFormat.Unescaped)
           this.DispatchRoute(context, verb, path)
     
+        static member Router(
+          getProject: 'TContext->int64->unit,
+          getProjectComments: 'TContext->int64->int64->unit,
+          updateProject: 'TContext->int->unit,
+          GET__projects_statistics: 'TContext->unit,
+          getPerson: 'TContext->string->unit,
+          ?notFound: 'TContext->string->string->unit) : MyRoutes =
+          { getProject = getProject
+            getProjectComments = getProjectComments
+            updateProject = updateProject
+            GET__projects_statistics = GET__projects_statistics
+            getPerson = getPerson
+            notFound = notFound}
     
