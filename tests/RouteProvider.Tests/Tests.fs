@@ -177,6 +177,7 @@ let ``guid routes work`` () =
       notFound = None
     }
   let sampGuid = System.Guid.NewGuid()
-  let resp = router.DispatchRoute("GET", "/projects/" + sampGuid.ToString("D"))
+  let path = Ns5.MyModule.getProjectGuid sampGuid
+  let resp = router.DispatchRoute("GET", path)
   Assert.IsTrue(resp.IsSome)
   Assert.AreEqual(sampGuid, resp.Value)
