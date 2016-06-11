@@ -4,10 +4,10 @@ NUGET
     FAKE (4.14.5)
     FParsec (1.0.2)
     FSharp.Compiler.Service (1.4.0.6)
-    FSharp.Formatting (2.12.0)
+    FSharp.Formatting (2.12)
       FSharp.Compiler.Service (1.4.0.6)
-      FSharpVSPowerTools.Core (2.1.0)
-    FSharpVSPowerTools.Core (2.1.0)
+      FSharpVSPowerTools.Core (2.1)
+    FSharpVSPowerTools.Core (2.1)
       FSharp.Compiler.Service (>= 1.4.0.6)
     Microsoft.Bcl (1.1.10)
       Microsoft.Bcl.Build (>= 1.0.14)
@@ -15,13 +15,13 @@ NUGET
     Microsoft.Net.Http (2.2.29)
       Microsoft.Bcl (>= 1.1.10)
       Microsoft.Bcl.Build (>= 1.0.14)
-    NUnit (3.0.0)
-    NUnit.Console (3.0.0)
-    NUnit.Runners (3.0.0)
-      NUnit.Console (3.0.0)
-    Octokit (0.16.0)
+    NUnit (3.0)
+    NUnit.Console (3.0)
+    NUnit.Runners (3.0)
+      NUnit.Console (3.0)
+    Octokit (0.16)
       Microsoft.Net.Http
-    SourceLink.Fake (1.1.0)
+    SourceLink.Fake (1.1)
 GITHUB
   remote: fsharp/FAKE
   specs:

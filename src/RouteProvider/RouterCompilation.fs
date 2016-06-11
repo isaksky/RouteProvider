@@ -9,7 +9,6 @@ open System.Collections.Generic
 open System.Diagnostics
 open System.IO
 open System.Reflection
-open Microsoft.FSharp.Compiler.SimpleSourceCodeServices
 
 module RouteCompilation =
   type RouteCompilationArgs =
